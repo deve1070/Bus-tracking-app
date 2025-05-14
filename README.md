@@ -35,15 +35,12 @@ Implement role-based authentication (Main Admin, Station Admin) using JWT.
 Create visualizations for bus performance, ridership, and feedback analytics.
 
 from Mobile Frontend(Passenger Mobile App)
-
-
-Biruk: Mobile Frontend (Passenger Mobile App)
 Responsibilities:
 Implement screens:
 PaymentScreen, ProfileScreen.
 Build components: MapComponent (react-native-maps), RouteCard, FeedbackForm, PaymentForm, NotificationBanner.
 
-
+Biruk: Mobile Frontend (Passenger Mobile App)
 Develop the React Native app for iOS and Android.
 Implement screens: HomeScreen, RouteScreen, FeedbackScreen, NotificationScreen
 Integrate Google Maps API for real-time bus tracking and route visualization.
