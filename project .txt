@@ -1,0 +1,143 @@
+﻿🖥️ Web App for Admins
+✅ Core Functionalities
+1. Authentication & Authorization
+
+   * Admin login
+
+   * Password management
+
+   * Role-based access (Main Admin, Station Admin)
+
+      2. Station Management
+
+         * Add/edit/delete stations
+
+         * Assign station admins
+
+            3. Bus Management
+
+               * Add/edit/delete buses
+               * Change route number
+
+               * Tag buses as active/inactive
+
+               * View all buses (with filter options)
+
+                  4. User & Driver Management
+
+                     * Add/edit drivers
+
+                     * Assign drivers to buses
+
+                        5. Real-Time Bus Monitoring
+
+                           * Track bus locations live on map
+
+                           * View filtered buses by route or status
+
+                              6. Messaging & Notifications
+
+                                 * Send notifications to drivers and passengers
+
+                                 * View and respond to user feedback
+
+                                    7. Feedback Management
+
+                                       * View, categorize, and respond to user feedback
+
+                                          8. Access Control & Security
+
+                                             * Manage user permissions
+
+                                             * Encrypt user data and perform security audits
+
+________________
+
+
+📊 Additional Functionality: Data Analysis (New Feature)
+                                                1. Bus Performance Reports
+
+                                                   * Travel time summaries
+
+                                                   * Frequency of delays
+
+                                                   * Active vs inactive status over time
+
+                                                      2. Ridership Statistics
+
+                                                         * Bus usage per route/station
+
+                                                         * Peak hour usage trends
+
+                                                            3. Feedback Analytics
+
+                                                               * Sentiment analysis of user feedback
+
+                                                               * Common complaint categories
+
+                                                                  4. Dashboard Visualization
+
+                                                                     * Charts and maps for admin insights
+
+
+
+
+📱 Mobile App for Users (Passengers)
+✅ Core Functionalities
+                                                                        1. Bus Tracking
+
+                                                                           * Real-time location updates on map
+
+                                                                           * Filter buses by route or number
+
+                                                                           * View full route from start to destination
+
+                                                                              2. User Notifications
+
+                                                                                 * Receive alerts about delays, route changes, etc.
+
+                                                                                 * In-app notification center
+
+                                                                                    3. Feedback System
+
+                                                                                       * Send feedback directly to the main admin
+
+                                                                                       * Optional email/name input for follow-up
+
+                                                                                          4. Schedule & Route Info
+
+                                                                                             * View route info for selected buses
+
+                                                                                             * It is a static text 
+
+                                                                                                5. User-Friendly Interface
+
+                                                                                                   * Simple UI for route search
+
+                                                                                                   * Multilingual support (if needed)
+
+________________
+
+
+💳 Additional Functionality: Payment Integration (New Feature)
+                                                                                                      1. Fare Estimation
+aSDF 
+                                                                                                         * View estimated fare before boarding
+
+                                                                                                            2. Digital Payments
+
+                                                                                                               * Integrate mobile wallets (e.g., Telebirr, CBE Birr)
+
+                                                                                                               * QR code or NFC tap for ticket validation
+
+                                                                                                                  3. Payment History
+
+                                                                                                                     * View past transactions
+
+                                                                                                                     * Download receipts
+
+                                                                                                                        4. Secure Payment Gateway
+
+                                                                                                                           * Integration with a secure third-party API
+
+                                                                                                                           * Real-time status updates after payment
