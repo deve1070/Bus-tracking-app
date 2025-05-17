@@ -2,15 +2,17 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import LoginPage from '../pages/auth/LoginPage';
+import PasswordReset from '../pages/main-admin/auth/PasswordReset';
 import DashboardLayout from '../layouts/DashboardLayout';
-import Dashboard from '../pages/dashboard/Dashboard';
-import StationManagement from '../pages/stations/StationManagement';
-import BusManagement from '../pages/buses/BusManagement';
-import UserManagement from '../pages/users/UserManagement';
-import RealTimeMonitoring from '../pages/monitoring/RealTimeMonitoring';
-import MessagingNotifications from '../pages/notifications/MessagingNotifications';
-import FeedbackManagement from '../pages/feedback/FeedbackManagement';
-import Analytics from '../pages/analytics/Analytics';
+import Dashboard from '../pages/main-admin/dashboard/Dashboard';
+import StationManagement from '../pages/main-admin/stations/StationManagement';
+import BusManagement from '../pages/main-admin/buses/BusManagement';
+import UserManagement from '../pages/main-admin/users/UserManagement';
+import RealTimeMonitoring from '../pages/main-admin/monitoring/RealTimeMonitoring';
+import MessagingNotifications from '../pages/main-admin/notifications/MessagingNotifications';
+import FeedbackManagement from '../pages/main-admin/feedback/FeedbackManagement';
+import Analytics from '../pages/main-admin/analytics/Analytics';
+import PaymentManagement from '../pages/main-admin/payments/PaymentManagement';
 import ProtectedRoute from './ProtectedRoute';
 
 const AppRoutes = () => {
@@ -19,6 +21,7 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/password-reset" element={<PasswordReset />} />
       
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<DashboardLayout />}>
@@ -30,6 +33,7 @@ const AppRoutes = () => {
           <Route path="notifications" element={<MessagingNotifications />} />
           <Route path="feedback" element={<FeedbackManagement />} />
           <Route path="analytics" element={<Analytics />} />
+          <Route path="payments" element={<PaymentManagement />} />
         </Route>
       </Route>
       

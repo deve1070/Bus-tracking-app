@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Bus } from 'lucide-react';
 
@@ -7,16 +7,13 @@ const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   
   // Redirect if already authenticated
   if (isAuthenticated) {
-    return <Navigate to="/" />;
+    return <Navigate to="/station-admin" />;
   }
-
-  const from = location.state?.from?.pathname || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +25,11 @@ const LoginPage: React.FC = () => {
     }
 
     try {
-      await login(email, password);
-      navigate(from, { replace: true });
-    } catch (err) {
+      // Bypass actual authentication and directly navigate
+      localStorage.setItem('token', 'dummy-token');
+      localStorage.setItem('userRole', 'station_admin');
+      navigate('/station-admin');
+    } catch {
       setError('Invalid email or password');
     }
   };
@@ -134,4 +133,4 @@ const LoginPage: React.FC = () => {
   );
 };
 
-export default LoginPage;
+export default LoginPage; 
