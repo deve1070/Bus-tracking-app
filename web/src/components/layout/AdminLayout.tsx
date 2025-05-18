@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Bus,
-  Users,
-  Bell,
-  Settings,
   Menu,
   X,
   LogOut,
@@ -14,6 +9,7 @@ import {
 
 interface AdminLayoutProps {
   children: React.ReactNode;
+  title: string;
   navigation: {
     name: string;
     href: string;
@@ -21,7 +17,7 @@ interface AdminLayoutProps {
   }[];
 }
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children, navigation }) => {
+const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, navigation }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
@@ -39,11 +35,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, navigation }) => {
       {/* Sidebar for desktop */}
       <div className="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">
         <div className="flex min-h-0 flex-1 flex-col border-r border-gray-200 bg-white">
-          <div className="flex flex-1 flex-col pt-5 pb-4">
+          <div className="flex flex-1 flex-col overflow-y-auto pt-5 pb-4">
             <div className="flex flex-shrink-0 items-center px-4">
-              <h1 className="text-xl font-bold text-gray-900">Main Admin</h1>
+              <h1 className="text-xl font-bold text-blue-600">{title}</h1>
             </div>
-            <nav className="mt-5 flex-1 px-2 space-y-1">
+            <nav className="mt-5 flex-1 space-y-1 bg-white px-2">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href;
                 return (
@@ -52,13 +48,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, navigation }) => {
                     to={item.href}
                     className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                       isActive
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
                     }`}
                   >
                     <item.icon
-                      className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                        isActive ? 'text-gray-500' : 'text-gray-400 group-hover:text-gray-500'
+                      className={`mr-3 h-6 w-6 flex-shrink-0 ${
+                        isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500'
                       }`}
                     />
                     {item.name}
@@ -144,7 +140,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, navigation }) => {
               </div>
               <div className="flex flex-1 flex-col overflow-y-auto pt-5 pb-4">
                 <div className="flex flex-shrink-0 items-center px-4">
-                  <h1 className="text-xl font-bold text-gray-900">Main Admin</h1>
+                  <h1 className="text-xl font-bold text-blue-600">{title}</h1>
                 </div>
                 <nav className="mt-5 flex-1 space-y-1 bg-white px-2">
                   {navigation.map((item) => {
@@ -155,14 +151,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, navigation }) => {
                         to={item.href}
                         className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                           isActive
-                            ? 'bg-gray-100 text-gray-900'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            ? 'bg-blue-50 text-blue-600'
+                            : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
                         }`}
                         onClick={() => setSidebarOpen(false)}
                       >
                         <item.icon
                           className={`mr-3 h-6 w-6 flex-shrink-0 ${
-                            isActive ? 'text-gray-500' : 'text-gray-400 group-hover:text-gray-500'
+                            isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500'
                           }`}
                         />
                         {item.name}

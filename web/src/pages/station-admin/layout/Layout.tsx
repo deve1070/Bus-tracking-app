@@ -7,7 +7,7 @@ import {
   Bell,
   Settings,
 } from 'lucide-react';
-import StationAdminLayout from '../../../components/layout/StationAdminLayout';
+import AdminLayout from '../../../components/layout/AdminLayout';
 
 const navigation = [
   { name: 'Dashboard', href: '/station-admin', icon: LayoutDashboard },
@@ -19,9 +19,9 @@ const navigation = [
 
 const StationAdminLayoutWrapper: React.FC = () => {
   return (
-    <StationAdminLayout navigation={navigation}>
+    <AdminLayout navigation={navigation} title="Station Admin">
       <Outlet />
-    </StationAdminLayout>
+    </AdminLayout>
   );
 };
 

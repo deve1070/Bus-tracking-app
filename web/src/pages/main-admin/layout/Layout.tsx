@@ -8,7 +8,6 @@ import {
   Settings,
   Map,
   BarChart,
-  Lock,
   MonitorCheck,
   CreditCard,
 } from 'lucide-react';
@@ -23,13 +22,12 @@ const navigation = [
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart },
   { name: 'Monitoring', href: '/admin/monitoring', icon: MonitorCheck },
   { name: 'Notifications', href: '/admin/notifications', icon: Bell },
-  { name: 'Password Reset', href: '/admin/password-reset', icon: Lock },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
 const MainAdminLayout: React.FC = () => {
   return (
-    <AdminLayout navigation={navigation}>
+    <AdminLayout navigation={navigation} title="Main Admin">
       <Outlet />
     </AdminLayout>
   );
