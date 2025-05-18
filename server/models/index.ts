@@ -12,11 +12,13 @@ interface IUser extends Document {
   name: string;
   email: string;
   password: string;
+  username:string;
   role: 'MainAdmin' | 'StationAdmin' | 'Driver' | 'Passenger';
   savedRoutes: Types.ObjectId[];
   station?: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
+  isModified: (path: string) => boolean; // Add this method to match Mongoose's Document methods
 }
 
 interface IBus extends Document {
@@ -35,6 +37,7 @@ interface IRoute extends Document {
   schedule: string;
   createdAt: Date;
   updatedAt: Date;
+  fare: number;
 }
 
 interface IStop extends Document {
@@ -96,13 +99,14 @@ interface IPayment extends Document {
 const userSchema = new Schema<IUser>({
   name: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  username:{type:String, required:true, unique:true, lowercase:true,trim:true},
   password: { type: String, required: true },
   role: { type: String, enum: ['MainAdmin', 'StationAdmin', 'Driver', 'Passenger'], required: true },
   savedRoutes: [{ type: Schema.Types.ObjectId, ref: 'Route' }],
   station: { type: Schema.Types.ObjectId, ref: 'Station', default: null }
 }, { timestamps: true });
 
-userSchema.pre('save', async function (next) {
+userSchema.pre<IUser>('save', async function (this: IUser, next: (err?: Error) => void): Promise<void> {
   if (this.isModified('password')) {
     this.password = await bcrypt.hash(this.password, 10);
   }
@@ -204,54 +208,3 @@ const Payment = model<IPayment>('Payment', paymentSchema);
 export { User, Bus, Route, Stop, Station, Schedule, Notification, Feedback, Payment };
 
 // server/app.ts
-import express, { Express, Request, Response } from 'express';
-import mongoose from 'mongoose';
-import cors from 'cors';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const app: Express = express();
-
-app.use(cors());
-app.use(express.json());
-
-mongoose.connect(process.env.MONGO_URI as string, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('MongoDB connected'))
-  .catch((err: Error) => console.error(err));
-
-app.get('/', (req: Request, res: Response) => res.send('API running'));
-
-export default app;
-
-// server/server.ts
-import http from 'http';
-import { Server } from 'socket.io';
-import app from './app';
-
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
-
-io.on('connection', (socket) => {
-  console.log('Client connected');
-  socket.on('disconnect', () => console.log('Client disconnected'));
-});
-
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-// server/tsconfig.json
-{
-  "compilerOptions": {
-    "target": "es2016",
-    "module": "commonjs",
-    "outDir": "./dist",
-    "rootDir": "./",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist"]
-}
