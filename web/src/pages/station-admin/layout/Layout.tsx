@@ -3,26 +3,26 @@ import { Outlet } from 'react-router-dom';
 import {
   LayoutDashboard,
   Bus,
-  Users,
+  Users2,
   Bell,
   Settings,
 } from 'lucide-react';
-import AdminLayout from '../../../components/layout/AdminLayout';
+import StationAdminLayout from '../../../components/layout/StationAdminLayout';
 
 const navigation = [
   { name: 'Dashboard', href: '/station-admin', icon: LayoutDashboard },
-  { name: 'Buses', href: '/station-admin/buses', icon: Bus },
-  { name: 'Passengers', href: '/station-admin/passengers', icon: Users },
+  { name: 'Station Buses', href: '/station-admin/buses', icon: Bus },
+  { name: 'Passengers', href: '/station-admin/passengers', icon: Users2 },
   { name: 'Notifications', href: '/station-admin/notifications', icon: Bell },
   { name: 'Settings', href: '/station-admin/settings', icon: Settings },
 ];
 
-const StationAdminLayout: React.FC = () => {
+const StationAdminLayoutWrapper: React.FC = () => {
   return (
-    <AdminLayout title="Station Admin" navigation={navigation}>
+    <StationAdminLayout navigation={navigation}>
       <Outlet />
-    </AdminLayout>
+    </StationAdminLayout>
   );
 };
 
-export default StationAdminLayout; 
+export default StationAdminLayoutWrapper; 

@@ -3,7 +3,10 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import LoginPage from '../pages/auth/LoginPage';
 import PasswordReset from '../pages/main-admin/auth/PasswordReset';
-import DashboardLayout from '../layouts/DashboardLayout';
+import MainAdminLayout from '../pages/main-admin/layout/Layout';
+import StationAdminLayout from '../pages/station-admin/layout/Layout';
+
+// Main Admin Pages
 import Dashboard from '../pages/main-admin/dashboard/Dashboard';
 import StationManagement from '../pages/main-admin/stations/StationManagement';
 import BusManagement from '../pages/main-admin/buses/BusManagement';
@@ -13,18 +16,32 @@ import MessagingNotifications from '../pages/main-admin/notifications/MessagingN
 import FeedbackManagement from '../pages/main-admin/feedback/FeedbackManagement';
 import Analytics from '../pages/main-admin/analytics/Analytics';
 import PaymentManagement from '../pages/main-admin/payments/PaymentManagement';
+
+// Station Admin Pages
+import StationDashboard from '../pages/station-admin/dashboard/Dashboard';
+import StationBuses from '../pages/station-admin/buses/BusManagement';
+import PassengerManagement from '../pages/station-admin/passengers/PassengerManagement';
+import StationNotifications from '../pages/station-admin/notifications/StationNotifications';
+import StationSettings from '../pages/station-admin/settings/StationSettings';
+
 import ProtectedRoute from './ProtectedRoute';
 
 const AppRoutes = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userRole } = useAuth();
+
+  const getDefaultRoute = () => {
+    if (!isAuthenticated) return '/login';
+    return userRole === 'station_admin' ? '/station-admin' : '/admin';
+  };
 
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/password-reset" element={<PasswordReset />} />
       
-      <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<DashboardLayout />}>
+      {/* Main Admin Routes */}
+      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+        <Route path="/admin" element={<MainAdminLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="stations" element={<StationManagement />} />
           <Route path="buses" element={<BusManagement />} />
@@ -36,8 +53,19 @@ const AppRoutes = () => {
           <Route path="payments" element={<PaymentManagement />} />
         </Route>
       </Route>
+
+      {/* Station Admin Routes */}
+      <Route element={<ProtectedRoute allowedRoles={['station_admin']} />}>
+        <Route path="/station-admin" element={<StationAdminLayout />}>
+          <Route index element={<StationDashboard />} />
+          <Route path="buses" element={<StationBuses />} />
+          <Route path="passengers" element={<PassengerManagement />} />
+          <Route path="notifications" element={<StationNotifications />} />
+          <Route path="settings" element={<StationSettings />} />
+        </Route>
+      </Route>
       
-      <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
+      <Route path="*" element={<Navigate to={getDefaultRoute()} replace />} />
     </Routes>
   );
 };
