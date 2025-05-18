@@ -49,7 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobile, onClose }) => {
       
       {!mobile && (
         <div className="p-6 border-b">
-          <h2 className="font-bold text-xl text-blue-700">TransitAdmin</h2>
+          <h2 className="font-bold text-xl text-blue-700">Main Admin</h2>
         </div>
       )}
 

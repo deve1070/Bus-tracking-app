@@ -53,8 +53,8 @@ const StationForm: React.FC<StationFormProps> = ({ station, onSubmit, onCancel }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
+    <form onSubmit={handleSubmit} className="grid grid-cols-3 gap-6">
+      <div className="col-span-2">
         <label htmlFor="name" className="block text-sm font-medium text-gray-700">
           Station Name
         </label>
@@ -63,21 +63,7 @@ const StationForm: React.FC<StationFormProps> = ({ station, onSubmit, onCancel }
           id="name"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-3"
-          required
-        />
-      </div>
-
-      <div>
-        <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-          Location
-        </label>
-        <input
-          type="text"
-          id="location"
-          value={formData.location}
-          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-3"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
           required
         />
       </div>
@@ -90,12 +76,26 @@ const StationForm: React.FC<StationFormProps> = ({ station, onSubmit, onCancel }
           id="status"
           value={formData.status}
           onChange={(e) => setFormData({ ...formData, status: e.target.value as Station['status'] })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-3"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
         >
           <option value="active">Active</option>
           <option value="maintenance">Maintenance</option>
           <option value="closed">Closed</option>
         </select>
+      </div>
+
+      <div className="col-span-2">
+        <label htmlFor="location" className="block text-sm font-medium text-gray-700">
+          Location
+        </label>
+        <input
+          type="text"
+          id="location"
+          value={formData.location}
+          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
+          required
+        />
       </div>
 
       <div>
@@ -107,17 +107,17 @@ const StationForm: React.FC<StationFormProps> = ({ station, onSubmit, onCancel }
           id="capacity"
           value={formData.capacity}
           onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-3"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
           required
           min="0"
         />
       </div>
 
-      <div>
+      <div className="col-span-3">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Facilities
         </label>
-        <div className="space-y-2">
+        <div className="grid grid-cols-3 gap-2">
           {['Parking', 'Restrooms', 'Waiting Area', 'Ticket Counter', 'WiFi', 'Food Court'].map((facility) => (
             <div key={facility} className="flex items-center">
               <input
@@ -135,45 +135,43 @@ const StationForm: React.FC<StationFormProps> = ({ station, onSubmit, onCancel }
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="latitude" className="block text-sm font-medium text-gray-700">
-            Latitude
-          </label>
-          <input
-            type="number"
-            id="latitude"
-            value={formData.coordinates.latitude}
-            onChange={(e) => setFormData({
-              ...formData,
-              coordinates: { ...formData.coordinates, latitude: parseFloat(e.target.value) }
-            })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-3"
-            required
-            step="any"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="longitude" className="block text-sm font-medium text-gray-700">
-            Longitude
-          </label>
-          <input
-            type="number"
-            id="longitude"
-            value={formData.coordinates.longitude}
-            onChange={(e) => setFormData({
-              ...formData,
-              coordinates: { ...formData.coordinates, longitude: parseFloat(e.target.value) }
-            })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-3"
-            required
-            step="any"
-          />
-        </div>
+      <div>
+        <label htmlFor="latitude" className="block text-sm font-medium text-gray-700">
+          Latitude
+        </label>
+        <input
+          type="number"
+          id="latitude"
+          value={formData.coordinates.latitude}
+          onChange={(e) => setFormData({
+            ...formData,
+            coordinates: { ...formData.coordinates, latitude: parseFloat(e.target.value) }
+          })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
+          required
+          step="any"
+        />
       </div>
 
-      <div className="flex justify-end space-x-3">
+      <div>
+        <label htmlFor="longitude" className="block text-sm font-medium text-gray-700">
+          Longitude
+        </label>
+        <input
+          type="number"
+          id="longitude"
+          value={formData.coordinates.longitude}
+          onChange={(e) => setFormData({
+            ...formData,
+            coordinates: { ...formData.coordinates, longitude: parseFloat(e.target.value) }
+          })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
+          required
+          step="any"
+        />
+      </div>
+
+      <div className="col-span-3 flex justify-end space-x-3">
         <button
           type="button"
           onClick={onCancel}

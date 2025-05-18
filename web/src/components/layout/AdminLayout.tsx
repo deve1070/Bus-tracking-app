@@ -14,7 +14,6 @@ import {
 
 interface AdminLayoutProps {
   children: React.ReactNode;
-  title: string;
   navigation: {
     name: string;
     href: string;
@@ -22,7 +21,7 @@ interface AdminLayoutProps {
   }[];
 }
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, navigation }) => {
+const AdminLayout: React.FC<AdminLayoutProps> = ({ children, navigation }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
@@ -40,11 +39,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, navigation }
       {/* Sidebar for desktop */}
       <div className="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">
         <div className="flex min-h-0 flex-1 flex-col border-r border-gray-200 bg-white">
-          <div className="flex flex-1 flex-col overflow-y-auto pt-5 pb-4">
+          <div className="flex flex-1 flex-col pt-5 pb-4">
             <div className="flex flex-shrink-0 items-center px-4">
-              <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+              <h1 className="text-xl font-bold text-gray-900">Main Admin</h1>
             </div>
-            <nav className="mt-5 flex-1 space-y-1 bg-white px-2">
+            <nav className="mt-5 flex-1 px-2 space-y-1">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href;
                 return (
@@ -58,7 +57,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, navigation }
                     }`}
                   >
                     <item.icon
-                      className={`mr-3 h-6 w-6 flex-shrink-0 ${
+                      className={`mr-3 h-5 w-5 flex-shrink-0 ${
                         isActive ? 'text-gray-500' : 'text-gray-400 group-hover:text-gray-500'
                       }`}
                     />
@@ -145,7 +144,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, navigation }
               </div>
               <div className="flex flex-1 flex-col overflow-y-auto pt-5 pb-4">
                 <div className="flex flex-shrink-0 items-center px-4">
-                  <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+                  <h1 className="text-xl font-bold text-gray-900">Main Admin</h1>
                 </div>
                 <nav className="mt-5 flex-1 space-y-1 bg-white px-2">
                   {navigation.map((item) => {
