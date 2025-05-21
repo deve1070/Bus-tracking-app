@@ -1,29 +1,29 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
+// app/_layout.tsx
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { ThemeToggleProvider, useTheme } from '../context/ThemeContext';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { StatusBar } from 'react-native';
+import './globals.css';
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
-  }
+function InnerLayout() {
+  const { theme } = useTheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+    <NavigationThemeProvider value={theme === 'dark' ? DarkTheme : DefaultTheme}>
+      <Stack initialRouteName="(tabs)">
+         <StatusBar hidden={true}/>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    </NavigationThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeToggleProvider>
+      <InnerLayout />
+    </ThemeToggleProvider>
   );
 }

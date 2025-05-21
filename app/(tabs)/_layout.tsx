@@ -1,45 +1,135 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+type TabIconProps = {
+  focused: boolean;
+  iconName: keyof typeof Ionicons.glyphMap;
+  title: string;
+  color?: string;
+  inactiveColor?: string;
+};
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+const TabIcon = ({ 
+  focused, 
+  iconName, 
+  title, 
+  color = '#4285F4', 
+  inactiveColor = '#ABB5D8' 
+}: TabIconProps) => {
+  return (
+    <View className="items-center justify-center py-1">
+      <Ionicons 
+        name={iconName} 
+        size={22} 
+        color={focused ? color : inactiveColor} 
+      />
+      {focused && (
+        <Text className="mt-1 text-[10px] font-medium text-white no-wrap">
+          {title}
+        </Text>
+      )}
+    </View>
+  );
+};
 
+const TabLayout = () => {
   return (
     <Tabs
+    initialRouteName='passenger'
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarShowLabel: false,
         headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
-      }}>
-      <Tabs.Screen
-        name="index"
+        tabBarStyle: {
+          backgroundColor: "#0f0D23",
+          borderRadius: 50,
+          marginHorizontal: 16,
+          paddingHorizontal: 8,
+          marginBottom: 36,
+          height: 60,
+          position: 'absolute',
+          overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: '#1A1D35',
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+        },
+        tabBarItemStyle: {
+          height: 48,
+          marginVertical: 6,
+        }
+      }}
+    >
+      <Tabs.Screen 
+        name="home"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon 
+              focused={focused} 
+              iconName="home" 
+              title="Home" 
+            />
+          ),
         }}
       />
-      <Tabs.Screen
-        name="explore"
+      
+      <Tabs.Screen 
+        name="passenger" 
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon 
+              focused={focused} 
+              iconName="people" 
+              title="Passengers" 
+            />
+          ),
+        }}
+      />
+      
+      <Tabs.Screen 
+        name="buses" 
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon 
+              focused={focused} 
+              iconName="bus" 
+              title="Buses" 
+            />
+          ),
+        }}
+      />
+      
+      <Tabs.Screen 
+        name="notifications" 
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon 
+              focused={focused} 
+              iconName="notifications" 
+              title="Alerts" 
+            />
+          ),
+        }}
+      />
+      
+      <Tabs.Screen 
+        name="settings" 
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon 
+              focused={focused} 
+              iconName="settings" 
+              title="Settings" 
+            />
+          ),
         }}
       />
     </Tabs>
   );
-}
+};
+
+export default TabLayout;
