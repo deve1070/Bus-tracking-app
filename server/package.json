@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "test": "echo \"Error: no test specified\" && exit 1",
+  "start": "node dist/server.js",
+  "build": "tsc",
+  "dev": "nodemon server.ts"
+
   },
   "keywords": [],
   "author": "",
@@ -19,7 +23,7 @@
     "@types/axios": "^0.9.36",
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.18",
-    "@types/express": "^5.0.1",
+    "@types/express": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.9",
     "axios": "^1.9.0",
     "bcrypt": "^6.0.0",
@@ -27,7 +31,7 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.14.3",
+    "mongoose": "^8.15.0",
     "natural": "^8.0.1",
     "socket.io": "^4.8.1"
   }

@@ -1,27 +1,53 @@
-import express, { Express, Request, Response } from 'express';
+import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import busRoutes from './routes/buses';
+import authRoutes from './routes/auth';
+import busRoutes from './routes/bus';
+import stationRoutes from './routes/station';
+import feedbackRoutes from './routes/feedback';
+import routeRoutes from './routes/route';
 
-
-
-
+// Load environment variables
 dotenv.config();
 
-const app: Express = express();
+const app = express();
 
+// Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-mongoose.connect(process.env.MONGO_URI as string, { 
-  useNewUrlParser: true, 
-  useUnifiedTopology: true 
+// Connect to MongoDB with timeout
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/bus-tracking', {
+  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
 })
-  .then(() => console.log('MongoDB connected'))
-  .catch((err: Error) => console.error(err));
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((error) => {
+    console.error('MongoDB connection error:', error);
+    process.exit(1); // Exit if cannot connect to database
+  });
 
-app.get('/', (req: Request, res: Response) => res.send('API running'));
+// Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/buses', busRoutes);
+app.use('/api/stations', stationRoutes);
+app.use('/api/routes', routeRoutes);
+app.use('/api/feedback', feedbackRoutes);
+
+// Error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+});
+
+// Add timeout to all requests
+app.use((req, res, next) => {
+  res.setTimeout(5000, () => {
+    res.status(408).json({ error: 'Request timeout' });
+  });
+  next();
+});
 
 export default app;

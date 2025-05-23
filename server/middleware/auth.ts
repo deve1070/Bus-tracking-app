@@ -1,24 +1,70 @@
 import {Request, Response, NextFunction} from 'express';
 import jwt from 'jsonwebtoken';
+import { User, UserRole } from '../models';
 
+export interface AuthRequest extends Request {
+    user?: any;
+}
 
+export const auth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const token = req.header('Authorization')?.replace('Bearer ', '');
 
-interface AuthRequest extends Request {
-    user?:{id:string,role:string};}
+        if (!token) {
+            throw new Error();
+        }
 
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const user = await User.findOne({ _id: (decoded as any)._id });
 
+        if (!user) {
+            throw new Error();
+        }
 
-    export const authenticate =(req:AuthRequest,res:Response,nexxt:NextFunction)=>{
-        try{
-            const token =req.headers.authorization?.split(' ')[1];
-            if (!token){
-                return res.status(401).json({error:'Unauthorized'});
+        req.user = user;
+        next();
+    } catch (error) {
+        res.status(401).json({ error: 'Please authenticate.' });
+    }
+};
+
+export const checkRole = (roles: UserRole[]) => {
+    return async (req: AuthRequest, res: Response, next: NextFunction) => {
+        try {
+            if (!req.user) {
+                throw new Error('User not authenticated');
             }
-            const decoded =jwt.verify(token,process.env.JWT_SECRET as string) as {id:string,role:string};
-            req.user =decoded;
-            nexxt();
-        }catch (error){
-            res.status(401).json({error:'Unauthorized'});
 
+            if (!roles.includes(req.user.role)) {
+                throw new Error('Insufficient permissions');
+            }
+
+            next();
+        } catch (error) {
+            res.status(403).json({ error: 'Access denied.' });
         }
     };
+};
+
+export const checkStationAccess = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        if (!req.user) {
+            throw new Error('User not authenticated');
+        }
+
+        if (req.user.role === UserRole.MAIN_ADMIN) {
+            return next();
+        }
+
+        if (req.user.role === UserRole.STATION_ADMIN && req.user.stationId) {
+            const stationId = req.params.stationId || req.body.stationId;
+            if (stationId && stationId.toString() === req.user.stationId.toString()) {
+                return next();
+            }
+        }
+
+        throw new Error('Insufficient station access');
+    } catch (error) {
+        res.status(403).json({ error: 'Access denied to station.' });
+    }
+};
