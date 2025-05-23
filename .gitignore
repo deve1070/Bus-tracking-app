@@ -8,6 +8,8 @@ yarn-error.log
 .env
 .env.local
 .env.*.local
+server/.env
+client/.env
 
 # Build output
 dist/
@@ -31,3 +33,7 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Local development
+*.local
+local.*
