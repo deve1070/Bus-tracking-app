@@ -1,160 +1,272 @@
-import React from 'react';
-import { BarChart2, TrendingUp, Users, Clock } from 'lucide-react';
-import LineChart from "../../../components/charts/LineChart";
+import React, { useState, useEffect } from 'react';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+import api from '../../../services/api';
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+interface AnalyticsData {
+  type: 'ROUTE' | 'BUS' | 'STATION' | 'PAYMENT' | 'FEEDBACK';
+  data: {
+    routeId?: string;
+    busId?: string;
+    stationId?: string;
+    timestamp: string;
+    metrics: {
+      passengerCount?: number;
+      revenue?: number;
+      averageSpeed?: number;
+      delayTime?: number;
+      occupancyRate?: number;
+      feedbackCount?: {
+        positive: number;
+        negative: number;
+        neutral: number;
+      };
+      paymentStats?: {
+        total: number;
+        successful: number;
+        failed: number;
+        averageAmount: number;
+      };
+    };
+  };
+  period: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+}
 
 const Analytics: React.FC = () => {
+  const [analyticsType, setAnalyticsType] = useState<'ROUTE' | 'BUS' | 'STATION' | 'PAYMENT' | 'FEEDBACK'>('ROUTE');
+  const [period, setPeriod] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY'>('DAILY');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [data, setData] = useState<AnalyticsData[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Set default date range to last 7 days
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 7);
+    setEndDate(end.toISOString().split('T')[0]);
+    setStartDate(start.toISOString().split('T')[0]);
+  }, []);
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      fetchAnalytics();
+    }
+  }, [analyticsType, period, startDate, endDate]);
+
+  const fetchAnalytics = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/analytics', {
+        params: {
+          type: analyticsType,
+          period,
+          startDate,
+          endDate
+        }
+      });
+      setData(response.data);
+    } catch (err) {
+      setError('Failed to fetch analytics data');
+      console.error('Error fetching analytics:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getChartData = () => {
+    const labels = data.map(item => new Date(item.data.timestamp).toLocaleDateString());
+    
+    let datasets = [];
+    switch (analyticsType) {
+      case 'ROUTE':
+        datasets = [
+          {
+            label: 'Passenger Count',
+            data: data.map(item => item.data.metrics.passengerCount || 0),
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+          },
+          {
+            label: 'Revenue',
+            data: data.map(item => item.data.metrics.revenue || 0),
+            borderColor: 'rgb(255, 99, 132)',
+            tension: 0.1
+          }
+        ];
+        break;
+      case 'BUS':
+        datasets = [
+          {
+            label: 'Passenger Count',
+            data: data.map(item => item.data.metrics.passengerCount || 0),
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+          },
+          {
+            label: 'Occupancy Rate (%)',
+            data: data.map(item => item.data.metrics.occupancyRate || 0),
+            borderColor: 'rgb(255, 99, 132)',
+            tension: 0.1
+          }
+        ];
+        break;
+      case 'STATION':
+        datasets = [
+          {
+            label: 'Passenger Count',
+            data: data.map(item => item.data.metrics.passengerCount || 0),
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+          }
+        ];
+        break;
+      case 'PAYMENT':
+        datasets = [
+          {
+            label: 'Total Payments',
+            data: data.map(item => item.data.metrics.paymentStats?.total || 0),
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+          },
+          {
+            label: 'Successful Payments',
+            data: data.map(item => item.data.metrics.paymentStats?.successful || 0),
+            borderColor: 'rgb(54, 162, 235)',
+            tension: 0.1
+          },
+          {
+            label: 'Failed Payments',
+            data: data.map(item => item.data.metrics.paymentStats?.failed || 0),
+            borderColor: 'rgb(255, 99, 132)',
+            tension: 0.1
+          }
+        ];
+        break;
+      case 'FEEDBACK':
+        datasets = [
+          {
+            label: 'Positive',
+            data: data.map(item => item.data.metrics.feedbackCount?.positive || 0),
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+          },
+          {
+            label: 'Negative',
+            data: data.map(item => item.data.metrics.feedbackCount?.negative || 0),
+            borderColor: 'rgb(255, 99, 132)',
+            tension: 0.1
+          },
+          {
+            label: 'Neutral',
+            data: data.map(item => item.data.metrics.feedbackCount?.neutral || 0),
+            borderColor: 'rgb(255, 205, 86)',
+            tension: 0.1
+          }
+        ];
+        break;
+    }
+
+    return {
+      labels,
+      datasets
+    };
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: `${analyticsType} Analytics`
+      }
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Analytics & Reports</h1>
-        <div className="flex space-x-3">
-          <select className="border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-            <option value="today">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="year">This Year</option>
+    <div className="py-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-4">Analytics Dashboard</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <select
+            value={analyticsType}
+            onChange={(e) => setAnalyticsType(e.target.value as any)}
+            className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          >
+            <option value="ROUTE">Route Analytics</option>
+            <option value="BUS">Bus Analytics</option>
+            <option value="STATION">Station Analytics</option>
+            <option value="PAYMENT">Payment Analytics</option>
+            <option value="FEEDBACK">Feedback Analytics</option>
           </select>
-          <button className="bg-blue-700 hover:bg-blue-800 text-white py-2 px-4 rounded-md text-sm">
-            Download Report
-          </button>
-        </div>
-      </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total Revenue</p>
-              <p className="text-2xl font-bold mt-1">$124,563.00</p>
-              <p className="text-sm text-green-600 flex items-center mt-2">
-                <TrendingUp size={16} className="mr-1" />
-                +12.5% from last month
-              </p>
-            </div>
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <BarChart2 className="text-blue-700" size={24} />
-            </div>
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as any)}
+            className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          >
+            <option value="DAILY">Daily</option>
+            <option value="WEEKLY">Weekly</option>
+            <option value="MONTHLY">Monthly</option>
+          </select>
+
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          />
+
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          />
+        </div>
+
+        {error && (
+          <div className="mb-4 rounded-md bg-red-50 p-4">
+            <div className="text-sm text-red-700">{error}</div>
           </div>
-        </div>
+        )}
 
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total Rides</p>
-              <p className="text-2xl font-bold mt-1">85,242</p>
-              <p className="text-sm text-green-600 flex items-center mt-2">
-                <TrendingUp size={16} className="mr-1" />
-                +8.2% from last month
-              </p>
-            </div>
-            <div className="bg-green-50 p-3 rounded-lg">
-              <Clock className="text-green-700" size={24} />
-            </div>
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Active Users</p>
-              <p className="text-2xl font-bold mt-1">24,532</p>
-              <p className="text-sm text-green-600 flex items-center mt-2">
-                <TrendingUp size={16} className="mr-1" />
-                +15.3% from last month
-              </p>
-            </div>
-            <div className="bg-purple-50 p-3 rounded-lg">
-              <Users className="text-purple-700" size={24} />
-            </div>
+        ) : (
+          <div className="bg-white p-6 rounded-lg shadow">
+            <Line data={getChartData()} options={chartOptions} />
           </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Avg. Ride Time</p>
-              <p className="text-2xl font-bold mt-1">32 mins</p>
-              <p className="text-sm text-red-600 flex items-center mt-2">
-                <TrendingUp size={16} className="mr-1" />
-                -2.4% from last month
-              </p>
-            </div>
-            <div className="bg-amber-50 p-3 rounded-lg">
-              <Clock className="text-amber-700" size={24} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h2 className="text-lg font-semibold mb-4">Revenue Trends</h2>
-          <LineChart />
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h2 className="text-lg font-semibold mb-4">User Growth</h2>
-          <LineChart />
-        </div>
-      </div>
-
-      {/* Detailed Stats Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold">Detailed Statistics</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Route
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Rides
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Revenue
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Avg. Time
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Growth
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {[
-                { route: 'Downtown Express', rides: '12,543', revenue: '$45,678', time: '28 mins', growth: '+12.3%' },
-                { route: 'Airport Shuttle', rides: '8,721', revenue: '$32,456', time: '45 mins', growth: '+8.7%' },
-                { route: 'University Line', rides: '15,234', revenue: '$28,912', time: '22 mins', growth: '+15.2%' },
-                { route: 'Shopping Circuit', rides: '9,876', revenue: '$18,765', time: '35 mins', growth: '+5.8%' },
-                { route: 'Beach Route', rides: '7,654', revenue: '$15,432', time: '40 mins', growth: '+9.4%' },
-              ].map((item, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {item.route}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.rides}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.revenue}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.time}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">
-                    {item.growth}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        )}
       </div>
     </div>
   );
