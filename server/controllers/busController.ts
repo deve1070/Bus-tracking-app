@@ -12,31 +12,65 @@ interface StationDocument extends Omit<IStation, '_id'> {
   _id: Types.ObjectId;
 }
 
+interface MongoError extends Error {
+  code?: number;
+  keyPattern?: Record<string, number>;
+}
+
 export const createBus = async (req: AuthRequest, res: Response) => {
   try {
     const {
       busNumber,
       routeNumber,
       capacity,
+      deviceId,
       route,
-      schedule
+      schedule,
+      status
     } = req.body;
+
+    // Validate required fields
+    if (!busNumber || !routeNumber || !capacity || !deviceId) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        required: ['busNumber', 'routeNumber', 'capacity', 'deviceId']
+      });
+    }
 
     const bus = new Bus({
       busNumber,
       routeNumber,
       capacity,
-      route,
-      schedule,
+      deviceId,
+      route: route || {
+        stations: [],
+        estimatedTime: 0
+      },
+      schedule: schedule || {
+        departureTime: new Date().toISOString(),
+        arrivalTime: new Date().toISOString()
+      },
       currentLocation: {
         type: 'Point',
-        coordinates: [0, 0] // Default location
-      }
+        coordinates: [0, 0]
+      },
+      status: status || 'INACTIVE',
+      isOnRoute: false,
+      currentPassengerCount: 0,
+      lastUpdateTime: new Date()
     });
 
     await bus.save();
     res.status(201).json(bus);
   } catch (error) {
+    console.error('Error creating bus:', error);
+    const mongoError = error as MongoError;
+    if (mongoError.code === 11000) {
+      // Duplicate key error
+      return res.status(400).json({ 
+        error: 'Bus number or device ID already exists' 
+      });
+    }
     res.status(400).json({ error: 'Failed to create bus' });
   }
 };

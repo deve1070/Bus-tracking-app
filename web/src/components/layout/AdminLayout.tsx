@@ -36,15 +36,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, navigation }
           }
         });
       }
-      // Clear auth data
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Force refresh and redirect to login
       window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
-      // Still clear local storage and redirect even if the API call fails
-    localStorage.removeItem('token');
+      localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }

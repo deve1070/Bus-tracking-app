@@ -1,12 +1,24 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../../services/api';
 
 interface User {
-  id: string;
+  _id: string;
   name: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  role: 'admin' | 'driver' | 'station_admin';
-  status: 'active' | 'inactive';
+  role: 'MAIN_ADMIN' | 'STATION_ADMIN' | 'DRIVER' | 'PASSENGER';
+  status: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
+}
+
+interface UserFormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  role: User['role'];
+  status: User['status'];
 }
 
 const UserManagement = () => {
@@ -15,11 +27,13 @@ const UserManagement = () => {
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
+  const [formData, setFormData] = useState<UserFormData>({
+    firstName: '',
+    lastName: '',
     email: '',
-    role: 'driver' as const,
-    status: 'active' as const,
+    password: '',
+    role: 'DRIVER',
+    status: 'ACTIVE',
   });
 
   useEffect(() => {
@@ -28,16 +42,11 @@ const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      // TODO: Implement API call to backend
-      const response = await fetch('/api/drivers');
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
-      } else {
-        setError('Failed to fetch users');
-      }
+      const response = await api.get('/users');
+      setUsers(response.data);
     } catch (err) {
-      setError('An error occurred while fetching users');
+      setError('Failed to fetch users');
+      console.error('Error fetching users:', err);
     } finally {
       setLoading(false);
     }
@@ -46,40 +55,49 @@ const UserManagement = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const url = selectedUser ? `/api/drivers/${selectedUser.id}` : '/api/drivers';
-      const method = selectedUser ? 'PUT' : 'POST';
+      const userData = {
+        ...formData,
+        name: `${formData.firstName} ${formData.lastName}`,
+      };
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        setIsModalOpen(false);
-        setSelectedUser(null);
-        setFormData({
-          name: '',
-          email: '',
-          role: 'driver',
-          status: 'active',
-        });
-        fetchUsers();
+      if (selectedUser) {
+        // Don't send password if it's empty (not being changed)
+        const dataToSend = { ...userData };
+        if (!dataToSend.password) {
+          delete (dataToSend as any).password;
+        }
+        await api.put(`/users/${selectedUser._id}`, dataToSend);
       } else {
-        setError('Failed to save user');
+        await api.post('/users', userData);
       }
+
+      setIsModalOpen(false);
+      setSelectedUser(null);
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+        role: 'DRIVER',
+        status: 'ACTIVE',
+      });
+      fetchUsers();
     } catch (err) {
-      setError('An error occurred while saving user');
+      setError('Failed to save user');
+      console.error('Error saving user:', err);
     }
   };
 
   const handleEdit = (user: User) => {
+    const [firstName, ...lastNameParts] = user.name.split(' ');
+    const lastName = lastNameParts.join(' ');
+    
     setSelectedUser(user);
     setFormData({
-      name: user.name,
+      firstName,
+      lastName,
       email: user.email,
+      password: '', // Don't show password when editing
       role: user.role,
       status: user.status,
     });
@@ -89,17 +107,11 @@ const UserManagement = () => {
   const handleDelete = async (userId: string) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
-        const response = await fetch(`/api/drivers/${userId}`, {
-          method: 'DELETE',
-        });
-
-        if (response.ok) {
-          fetchUsers();
-        } else {
-          setError('Failed to delete user');
-        }
+        await api.delete(`/users/${userId}`);
+        fetchUsers();
       } catch (err) {
-        setError('An error occurred while deleting user');
+        setError('Failed to delete user');
+        console.error('Error deleting user:', err);
       }
     }
   };
@@ -127,10 +139,12 @@ const UserManagement = () => {
             onClick={() => {
               setSelectedUser(null);
               setFormData({
-                name: '',
+                firstName: '',
+                lastName: '',
                 email: '',
-                role: 'driver',
-                status: 'active',
+                password: '',
+                role: 'DRIVER',
+                status: 'ACTIVE',
               });
               setIsModalOpen(true);
             }}
@@ -176,7 +190,7 @@ const UserManagement = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {users.map((user) => (
-                    <tr key={user.id}>
+                    <tr key={user._id}>
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                         {user.name}
                       </td>
@@ -189,7 +203,7 @@ const UserManagement = () => {
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            user.status === 'active'
+                            user.status === 'ACTIVE'
                               ? 'bg-green-100 text-green-800'
                               : 'bg-red-100 text-red-800'
                           }`}
@@ -208,7 +222,7 @@ const UserManagement = () => {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDelete(user.id)}
+                          onClick={() => handleDelete(user._id)}
                           className="text-red-600 hover:text-red-900"
                         >
                           Delete
@@ -232,14 +246,28 @@ const UserManagement = () => {
             </h2>
             <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                  Name
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                  First Name
                 </label>
                 <input
                   type="text"
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  id="firstName"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
                   required
                 />
@@ -260,6 +288,20 @@ const UserManagement = () => {
               </div>
 
               <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password {selectedUser && '(leave blank to keep current)'}
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
+                  required={!selectedUser}
+                />
+              </div>
+
+              <div>
                 <label htmlFor="role" className="block text-sm font-medium text-gray-700">
                   Role
                 </label>
@@ -269,9 +311,10 @@ const UserManagement = () => {
                   onChange={(e) => setFormData({ ...formData, role: e.target.value as User['role'] })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
                 >
-                  <option value="admin">Admin</option>
-                  <option value="driver">Driver</option>
-                  <option value="station_admin">Station Admin</option>
+                  <option value="MAIN_ADMIN">Main Admin</option>
+                  <option value="STATION_ADMIN">Station Admin</option>
+                  <option value="DRIVER">Driver</option>
+                  <option value="PASSENGER">Passenger</option>
                 </select>
               </div>
 
@@ -285,8 +328,8 @@ const UserManagement = () => {
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as User['status'] })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
                 >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
                 </select>
               </div>
 
