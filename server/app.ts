@@ -8,6 +8,7 @@ import stationRoutes from './routes/station';
 import feedbackRoutes from './routes/feedback';
 import routeRoutes from './routes/route';
 import analyticsRoutes from './routes/analytics';
+import userRoutes from './routes/userRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -46,6 +47,7 @@ app.use('/api/stations', stationRoutes);
 app.use('/api/routes', routeRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/users', userRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -3,12 +3,12 @@ import api from '../../../services/api';
 
 interface User {
   _id: string;
-  name: string;
   firstName: string;
   lastName: string;
   email: string;
-  role: 'MAIN_ADMIN' | 'STATION_ADMIN' | 'DRIVER' | 'PASSENGER';
-  status: 'ACTIVE' | 'INACTIVE';
+  role: 'MainAdmin' | 'StationAdmin' | 'Driver' | 'Passenger';
+  phoneNumber: string;
+  username: string;
   createdAt: string;
 }
 
@@ -18,7 +18,8 @@ interface UserFormData {
   email: string;
   password: string;
   role: User['role'];
-  status: User['status'];
+  phoneNumber: string;
+  username: string;
 }
 
 const UserManagement = () => {
@@ -32,8 +33,9 @@ const UserManagement = () => {
     lastName: '',
     email: '',
     password: '',
-    role: 'DRIVER',
-    status: 'ACTIVE',
+    role: 'Driver',
+    phoneNumber: '',
+    username: '',
   });
 
   useEffect(() => {
@@ -55,20 +57,15 @@ const UserManagement = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const userData = {
-        ...formData,
-        name: `${formData.firstName} ${formData.lastName}`,
-      };
-
       if (selectedUser) {
         // Don't send password if it's empty (not being changed)
-        const dataToSend = { ...userData };
+        const dataToSend = { ...formData };
         if (!dataToSend.password) {
           delete (dataToSend as any).password;
         }
         await api.put(`/users/${selectedUser._id}`, dataToSend);
       } else {
-        await api.post('/users', userData);
+        await api.post('/users', formData);
       }
 
       setIsModalOpen(false);
@@ -78,8 +75,9 @@ const UserManagement = () => {
         lastName: '',
         email: '',
         password: '',
-        role: 'DRIVER',
-        status: 'ACTIVE',
+        role: 'Driver',
+        phoneNumber: '',
+        username: '',
       });
       fetchUsers();
     } catch (err) {
@@ -89,17 +87,15 @@ const UserManagement = () => {
   };
 
   const handleEdit = (user: User) => {
-    const [firstName, ...lastNameParts] = user.name.split(' ');
-    const lastName = lastNameParts.join(' ');
-    
     setSelectedUser(user);
     setFormData({
-      firstName,
-      lastName,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email,
       password: '', // Don't show password when editing
       role: user.role,
-      status: user.status,
+      phoneNumber: user.phoneNumber,
+      username: user.username,
     });
     setIsModalOpen(true);
   };
@@ -143,8 +139,9 @@ const UserManagement = () => {
                 lastName: '',
                 email: '',
                 password: '',
-                role: 'DRIVER',
-                status: 'ACTIVE',
+                role: 'Driver',
+                phoneNumber: '',
+                username: '',
               });
               setIsModalOpen(true);
             }}
@@ -175,10 +172,13 @@ const UserManagement = () => {
                       Email
                     </th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Username
+                    </th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                       Role
                     </th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Status
+                      Phone
                     </th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                       Created At
@@ -192,25 +192,16 @@ const UserManagement = () => {
                   {users.map((user) => (
                     <tr key={user._id}>
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                        {user.name}
+                        {`${user.firstName} ${user.lastName}`}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.email}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.username}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           {user.role}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            user.status === 'ACTIVE'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {user.status}
-                        </span>
-                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.phoneNumber}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         {new Date(user.createdAt).toLocaleDateString()}
                       </td>
@@ -288,6 +279,34 @@ const UserManagement = () => {
               </div>
 
               <div>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  id="username"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  id="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
+                  required
+                />
+              </div>
+
+              <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Password {selectedUser && '(leave blank to keep current)'}
                 </label>
@@ -311,25 +330,10 @@ const UserManagement = () => {
                   onChange={(e) => setFormData({ ...formData, role: e.target.value as User['role'] })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
                 >
-                  <option value="MAIN_ADMIN">Main Admin</option>
-                  <option value="STATION_ADMIN">Station Admin</option>
-                  <option value="DRIVER">Driver</option>
-                  <option value="PASSENGER">Passenger</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-                  Status
-                </label>
-                <select
-                  id="status"
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as User['status'] })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
-                >
-                  <option value="ACTIVE">Active</option>
-                  <option value="INACTIVE">Inactive</option>
+                  <option value="MainAdmin">Main Admin</option>
+                  <option value="StationAdmin">Station Admin</option>
+                  <option value="Driver">Driver</option>
+                  <option value="Passenger">Passenger</option>
                 </select>
               </div>
 
