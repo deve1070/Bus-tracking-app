@@ -1,37 +1,80 @@
 import React, { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { UserRole, LoginResponse } from '../../types/auth';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { Bus } from 'lucide-react';
+
+const API_URL = 'http://localhost:5000/api';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { isAuthenticated, loading } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  
-  // Redirect if already authenticated
-  if (isAuthenticated) {
-    return <Navigate to="/station-admin" />;
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (!email || !password) {
-      setError('Email and password are required');
-      return;
-    }
+    setLoading(true);
 
     try {
-      // Bypass actual authentication and directly navigate
-      localStorage.setItem('token', 'dummy-token');
-      localStorage.setItem('userRole', 'station_admin');
-      navigate('/station-admin');
-    } catch {
-      setError('Invalid email or password');
+      console.log('Attempting login with:', { email });
+      
+      const response = await axios.post<LoginResponse>(`${API_URL}/auth/login`, { 
+        email, 
+        password 
+      });
+
+      console.log('Login response:', response.data);
+      
+      const { user, token } = response.data;
+      
+      // Store auth data
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      console.log('User role:', user.role);
+      
+      // Navigate based on role
+      switch (user.role) {
+        case 'MainAdmin':
+          console.log('Navigating to main admin dashboard');
+          navigate('/main-admin/dashboard');
+          break;
+        case 'StationAdmin':
+          console.log('Navigating to station admin dashboard');
+          navigate('/station-admin/dashboard');
+          break;
+        case 'Driver':
+          console.log('Navigating to driver dashboard');
+          navigate('/driver/dashboard');
+          break;
+        default:
+          console.log('Unknown role:', user.role);
+          setError('Invalid user role');
+          break;
+      }
+    } catch (err: any) {
+      console.error('Login error:', err);
+      if (err.response?.status === 401) {
+        setError('Invalid email or password. Please try again.');
+      } else {
+        setError(
+          err.response?.data?.error || 
+          err.message || 
+          'Login failed. Please try again.'
+        );
+      }
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -74,17 +117,26 @@ const LoginPage: React.FC = () => {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500"
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
             </div>
           </div>
 

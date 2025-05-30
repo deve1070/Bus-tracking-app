@@ -21,7 +21,7 @@ const startServer = async () => {
         console.log(`Server running on port ${port}`);
         resolve();
       });
-    });
+      });
   };
 
   try {
@@ -36,7 +36,7 @@ const startServer = async () => {
 server.on('error', (error: Error) => {
   console.error('Server error:', error);
   process.exit(1);
-});
+  });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error: Error) => {

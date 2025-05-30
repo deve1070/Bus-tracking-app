@@ -1,15 +1,14 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const ProtectedRoute = () => {
-  const { isAuthenticated, loading } = useAuth();
-  const location = useLocation();
+interface ProtectedRouteProps {
+  allowedRoles?: ('MainAdmin' | 'StationAdmin' | 'Driver')[];
+}
 
-  // If not authenticated and not loading, redirect to login
-  if (!isAuthenticated && !loading) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
+  const { isAuthenticated, user, loading } = useAuth();
+  const location = useLocation();
 
   // If still loading, show loading screen
   if (loading) {
@@ -20,7 +19,18 @@ const ProtectedRoute = () => {
     );
   }
 
-  // If authenticated, show the protected content
+  // If not authenticated, redirect to login
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // If role check is required and user's role is not allowed
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    // Redirect to appropriate dashboard based on role
+    return <Navigate to={user.role === 'MainAdmin' ? '/admin' : '/station-admin'} replace />;
+  }
+
+  // If authenticated and role check passes, show the protected content
   return <Outlet />;
 };
 

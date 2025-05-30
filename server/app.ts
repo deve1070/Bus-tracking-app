@@ -18,6 +18,15 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('Request body:', { ...req.body, password: '[REDACTED]' });
+  }
+  next();
+});
+
 // Connect to MongoDB with timeout
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/bus-tracking', {
   serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
@@ -38,7 +47,7 @@ app.use('/api/feedback', feedbackRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
+  console.error('Error:', err);
   res.status(500).json({ error: 'Something went wrong!' });
 });
 

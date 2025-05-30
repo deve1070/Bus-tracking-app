@@ -169,7 +169,7 @@ export const updateBusLocation = async (req: AuthRequest, res: Response) => {
         };
         bus.lastUpdateTime = new Date();
         if (bus.route) {
-          bus.route.estimatedTime = Math.round(eta / 60); // Convert to minutes
+        bus.route.estimatedTime = Math.round(eta / 60); // Convert to minutes
         }
         await bus.save();
 
@@ -225,35 +225,35 @@ export const getBusTrackingInfo = async (req: AuthRequest, res: Response) => {
     if (nextStationId) {
       const nextStationDoc = await Station.findById(nextStationId).lean() as StationDocument | null;
       if (nextStationDoc && nextStationDoc.location) {
-        const [eta, distance] = await Promise.all([
-          OSRMService.calculateETA(
-            {
-              lat: bus.currentLocation.coordinates[1],
-              lng: bus.currentLocation.coordinates[0]
-            },
-            {
+      const [eta, distance] = await Promise.all([
+        OSRMService.calculateETA(
+          {
+            lat: bus.currentLocation.coordinates[1],
+            lng: bus.currentLocation.coordinates[0]
+          },
+          {
               lat: nextStationDoc.location.coordinates[1],
               lng: nextStationDoc.location.coordinates[0]
-            }
-          ),
-          OSRMService.calculateDistance(
-            {
-              lat: bus.currentLocation.coordinates[1],
-              lng: bus.currentLocation.coordinates[0]
-            },
-            {
+          }
+        ),
+        OSRMService.calculateDistance(
+          {
+            lat: bus.currentLocation.coordinates[1],
+            lng: bus.currentLocation.coordinates[0]
+          },
+          {
               lat: nextStationDoc.location.coordinates[1],
               lng: nextStationDoc.location.coordinates[0]
-            }
-          )
-        ]);
+          }
+        )
+      ]);
 
-        trackingInfo = {
-          ...trackingInfo,
+      trackingInfo = {
+        ...trackingInfo,
           nextStation: nextStationDoc._id.toString(),
-          eta: Math.round(eta / 60),
-          distanceToNext: Math.round(distance)
-        };
+        eta: Math.round(eta / 60),
+        distanceToNext: Math.round(distance)
+      };
       }
     }
 

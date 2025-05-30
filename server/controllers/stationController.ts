@@ -66,11 +66,10 @@ export const deleteStation = async (req: AuthRequest, res: Response) => {
 
 export const getStations = async (req: AuthRequest, res: Response) => {
   try {
-    const stations = await Station.find()
-      .populate('adminId', 'firstName lastName email');
-
+    const stations = await Station.find();
     res.json(stations);
   } catch (error) {
+    console.error('Error in getStations:', error);
     res.status(400).json({ error: 'Failed to fetch stations' });
   }
 };
@@ -78,8 +77,7 @@ export const getStations = async (req: AuthRequest, res: Response) => {
 export const getStationById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const station = await Station.findById(id)
-      .populate('adminId', 'firstName lastName email');
+    const station = await Station.findById(id);
 
     if (!station) {
       return res.status(404).json({ error: 'Station not found' });
@@ -87,6 +85,7 @@ export const getStationById = async (req: AuthRequest, res: Response) => {
 
     res.json(station);
   } catch (error) {
+    console.error('Error in getStationById:', error);
     res.status(400).json({ error: 'Failed to fetch station' });
   }
 };
@@ -130,12 +129,19 @@ export const getNearbyStations = async (req: AuthRequest, res: Response) => {
   try {
     const { lat, lng, maxDistance = 5000 } = req.query; // maxDistance in meters
 
+    const latitude = Number(lat);
+    const longitude = Number(lng);
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      return res.status(400).json({ error: 'Invalid latitude or longitude' });
+    }
+
     const stations = await Station.find({
       location: {
         $near: {
           $geometry: {
             type: 'Point',
-            coordinates: [Number(lng), Number(lat)]
+            coordinates: [longitude, latitude]
           },
           $maxDistance: Number(maxDistance)
         }
@@ -144,6 +150,23 @@ export const getNearbyStations = async (req: AuthRequest, res: Response) => {
 
     res.json(stations);
   } catch (error) {
+    console.error('Error in getNearbyStations:', error);
     res.status(400).json({ error: 'Failed to fetch nearby stations' });
+  }
+};
+
+export const getStationByName = async (req: AuthRequest, res: Response) => {
+  try {
+    const { name } = req.params;
+    const station = await Station.findOne({ name });
+
+    if (!station) {
+      return res.status(404).json({ error: 'Station not found' });
+    }
+
+    res.json(station);
+  } catch (error) {
+    console.error('Error in getStationByName:', error);
+    res.status(400).json({ error: 'Failed to fetch station' });
   }
 }; 

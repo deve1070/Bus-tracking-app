@@ -25,7 +25,7 @@ export const createFeedback = async (req: AuthRequest, res: Response) => {
     const sentimentCategory = sentiment > 0 ? 'POSITIVE' : sentiment < 0 ? 'NEGATIVE' : 'NEUTRAL';
 
     const feedback = new Feedback({
-      userId: req.user._id,
+      userId: req.user?._id,
       type,
       category,
       message,
@@ -37,6 +37,7 @@ export const createFeedback = async (req: AuthRequest, res: Response) => {
     await feedback.save();
     res.status(201).json(feedback);
   } catch (error) {
+    console.error('Error creating feedback:', error);
     res.status(400).json({ error: 'Failed to create feedback' });
   }
 };

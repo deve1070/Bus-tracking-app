@@ -1,10 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authService, User, LoginCredentials, RegisterData, UserRole } from '../services/auth';
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  error: string | null;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
+  logout: () => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,48 +24,88 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if user is already authenticated
-    const token = localStorage.getItem('token');
-    if (token) {
-      setIsAuthenticated(true);
-    }
-    setLoading(false);
+    const initAuth = async () => {
+      try {
+        const savedUser = authService.getCurrentUser();
+        if (savedUser) {
+          setUser(savedUser);
+          setIsAuthenticated(true);
+        }
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (credentials: LoginCredentials) => {
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-
-      // Store the token
-      localStorage.setItem('token', data.token);
+      setError(null);
+      const response = await authService.login(credentials);
+      authService.setAuthData(response);
+      setUser(response.user);
       setIsAuthenticated(true);
-    } catch (error) {
-      throw error;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Login failed');
+      throw err;
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setIsAuthenticated(false);
+  const register = async (data: RegisterData) => {
+    try {
+      setError(null);
+      const response = await authService.register(data);
+      authService.setAuthData(response);
+      setUser(response.user);
+      setIsAuthenticated(true);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Registration failed');
+      throw err;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await authService.logout();
+      setUser(null);
+      setIsAuthenticated(false);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Logout failed');
+      throw err;
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      setError(null);
+      await authService.changePassword(currentPassword, newPassword);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Password change failed');
+      throw err;
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, loading, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        user,
+        loading,
+        error,
+        login,
+        register,
+        logout,
+        changePassword
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

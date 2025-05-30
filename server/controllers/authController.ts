@@ -44,18 +44,20 @@ export const register = async (req: Request, res: Response) => {
 
     // Generate token
     const token = jwt.sign(
-      { _id: (user as IUser)._id.toString() },
+      { _id: ((user as any)._id).toString() },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '6h' }
     );
 
     res.status(201).json({
       user: {
-        id: (user as IUser)._id,
-        email: (user as IUser).email,
-        firstName: (user as IUser).firstName,
-        lastName: (user as IUser).lastName,
-        role: (user as IUser).role
+        id: String(user._id),
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        username: user.username,
+        phoneNumber: user.phoneNumber
       },
       token
     });
@@ -74,41 +76,53 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt for email:', email);
 
-    // Find user
-    const user = await User.findOne({ email });
+    // Find user without validation
+    const user = await User.findOne({ email }).select('+password');
     if (!user) {
+      console.log('User not found for email:', email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Check password
-    const isMatch = await (user as IUser).comparePassword(password);
+    const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      console.log('Invalid password for email:', email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Update last login
-    (user as IUser).lastLogin = new Date();
-    await user.save();
+    // Update last login without validation
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
 
     // Generate token
     const token = jwt.sign(
-      { _id: (user as IUser)._id.toString() },
+      { _id: ((user as any)._id).toString() },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
+    console.log('Login successful for user:', {
+      id: user._id,
+      email: user.email,
+      role: user.role
+    });
+
     res.json({
       user: {
-        id: (user as IUser)._id,
-        email: (user as IUser).email,
-        firstName: (user as IUser).firstName,
-        lastName: (user as IUser).lastName,
-        role: (user as IUser).role
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        username: user.username,
+        phoneNumber: user.phoneNumber
       },
       token
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(400).json({ error: 'Login failed' });
   }
 };
@@ -126,13 +140,13 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
     }
 
     // Verify current password
-    const isMatch = await (user as IUser).comparePassword(currentPassword);
+    const isMatch = await user.comparePassword(currentPassword);
     if (!isMatch) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
     // Update password
-    (user as IUser).password = newPassword;
+    user.password = newPassword;
     await user.save();
 
     res.json({ message: 'Password updated successfully' });
