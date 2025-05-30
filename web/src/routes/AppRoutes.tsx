@@ -47,18 +47,18 @@ const AppRoutes = () => {
   return (
     <Routes>
       {user?.role === 'MainAdmin' ? (
-        <Route path="/admin" element={<MainAdminLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="stations" element={<StationManagement />} />
-          <Route path="buses" element={<BusManagement />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="monitoring" element={<RealTimeMonitoring />} />
-          <Route path="notifications" element={<MessagingNotifications />} />
-          <Route path="feedback" element={<FeedbackManagement />} />
-          <Route path="analytics" element={<Analytics />} />
-          <Route path="payments" element={<PaymentManagement />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
+      <Route path="/admin" element={<MainAdminLayout />}>
+        <Route index element={<Dashboard />} />
+        <Route path="stations" element={<StationManagement />} />
+        <Route path="buses" element={<BusManagement />} />
+        <Route path="users" element={<UserManagement />} />
+        <Route path="monitoring" element={<RealTimeMonitoring />} />
+        <Route path="notifications" element={<MessagingNotifications />} />
+        <Route path="feedback" element={<FeedbackManagement />} />
+        <Route path="analytics" element={<Analytics />} />
+        <Route path="payments" element={<PaymentManagement />} />
+        <Route path="settings" element={<Settings />} />
+      </Route>
       ) : (
         <Route path="/station-admin" element={<StationAdminLayout />}>
           <Route index element={<StationDashboard />} />

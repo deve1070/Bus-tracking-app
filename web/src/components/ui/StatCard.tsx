@@ -1,14 +1,15 @@
 import React from 'react';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
-type StatCardProps = {
+interface StatCardProps {
   title: string;
   value: string;
-  change: string;
+  change?: string;
   isPositive?: boolean;
   isNeutral?: boolean;
-  icon: React.ReactNode;
-};
+  icon: React.ReactElement<LucideIcon>;
+  loading?: boolean;
+}
 
 const StatCard: React.FC<StatCardProps> = ({ 
   title, 
@@ -16,36 +17,40 @@ const StatCard: React.FC<StatCardProps> = ({
   change, 
   isPositive, 
   isNeutral, 
-  icon 
+  icon,
+  loading = false
 }) => {
-  let changeColor = 'text-gray-500';
-  let changeIcon = null;
-
-  if (isPositive) {
-    changeColor = 'text-green-600';
-    changeIcon = <ChevronUp size={16} />;
-  } else if (isNeutral) {
-    changeColor = 'text-gray-500';
-  } else {
-    changeColor = 'text-red-600';
-    changeIcon = <ChevronDown size={16} />;
-  }
-
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-      <div className="flex justify-between">
+    <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
-          <p className="text-2xl font-bold">{value}</p>
+          <p className="text-sm font-medium text-gray-600">{title}</p>
+          {loading ? (
+            <div className="mt-2 h-8 w-24 bg-gray-200 rounded animate-pulse"></div>
+          ) : (
+            <p className="mt-2 text-3xl font-semibold text-gray-900">{value}</p>
+          )}
         </div>
-        <div className="h-12 w-12 rounded-lg bg-blue-50 flex items-center justify-center">
+        <div className="p-3 bg-blue-50 rounded-full">
           {icon}
         </div>
       </div>
-      <div className={`flex items-center mt-4 ${changeColor}`}>
-        {changeIcon}
-        <span className="text-sm font-medium">{change} from last week</span>
+      {change && !loading && (
+        <div className="mt-4 flex items-center">
+          {isPositive !== undefined && (
+            <span className={`text-sm font-medium ${
+              isPositive ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {change}
+            </span>
+          )}
+          {isNeutral && (
+            <span className="text-sm font-medium text-gray-600">
+              {change}
+            </span>
+          )}
       </div>
+      )}
     </div>
   );
 };

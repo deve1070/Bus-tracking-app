@@ -38,19 +38,15 @@ const LoginPage: React.FC = () => {
       
       console.log('User role:', user.role);
       
-      // Navigate based on role
+      // Navigate based on role and force refresh
       switch (user.role) {
         case 'MainAdmin':
           console.log('Navigating to main admin dashboard');
-          navigate('/main-admin/dashboard');
+          window.location.href = '/admin';
           break;
         case 'StationAdmin':
           console.log('Navigating to station admin dashboard');
-          navigate('/station-admin/dashboard');
-          break;
-        case 'Driver':
-          console.log('Navigating to driver dashboard');
-          navigate('/driver/dashboard');
+          window.location.href = '/station-admin/dashboard';
           break;
         default:
           console.log('Unknown role:', user.role);
@@ -118,17 +114,17 @@ const LoginPage: React.FC = () => {
                 Password
               </label>
               <div className="relative">
-                <input
-                  id="password"
-                  name="password"
+              <input
+                id="password"
+                name="password"
                   type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                  placeholder="••••••••"
-                />
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                placeholder="••••••••"
+              />
                 <button
                   type="button"
                   onClick={togglePasswordVisibility}

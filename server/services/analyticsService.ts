@@ -15,11 +15,11 @@ export class AnalyticsService {
     // Calculate route analytics
     const routes = await Route.find();
     for (const route of routes) {
-      const routeAnalytics = await this.calculateRouteAnalytics(route._id, today);
+      const routeAnalytics = await this.calculateRouteAnalytics(String(route._id), today);
       await Analytics.create({
         type: 'ROUTE',
         data: {
-          routeId: route._id,
+          routeId: String(route._id),
           timestamp: today,
           metrics: routeAnalytics
         },
@@ -30,11 +30,11 @@ export class AnalyticsService {
     // Calculate bus analytics
     const buses = await Bus.find();
     for (const bus of buses) {
-      const busAnalytics = await this.calculateBusAnalytics(bus._id, today);
+      const busAnalytics = await this.calculateBusAnalytics(String(bus._id), today);
       await Analytics.create({
         type: 'BUS',
         data: {
-          busId: bus._id,
+          busId: String(bus._id),
           timestamp: today,
           metrics: busAnalytics
         },
@@ -45,11 +45,11 @@ export class AnalyticsService {
     // Calculate station analytics
     const stations = await Station.find();
     for (const station of stations) {
-      const stationAnalytics = await this.calculateStationAnalytics(station._id, today);
+      const stationAnalytics = await this.calculateStationAnalytics(String(station._id), today);
       await Analytics.create({
         type: 'STATION',
         data: {
-          stationId: station._id,
+          stationId: String(station._id),
           timestamp: today,
           metrics: stationAnalytics
         },
@@ -84,7 +84,7 @@ export class AnalyticsService {
     const nextDay = new Date(date);
     nextDay.setDate(nextDay.getDate() + 1);
 
-    const [passengerCount, revenue, averageSpeed, delayTime] = await Promise.all([
+    const [passengerCount, revenue, averageSpeed] = await Promise.all([
       AnonymousPassenger.countDocuments({ routeId, createdAt: { $gte: date, $lt: nextDay } }),
       Payment.aggregate([
         { $match: { route: routeId, createdAt: { $gte: date, $lt: nextDay } } },
@@ -146,8 +146,8 @@ export class AnalyticsService {
     });
 
     const total = payments.length;
-    const successful = payments.filter(p => p.status === 'completed').length;
-    const failed = payments.filter(p => p.status === 'failed').length;
+    const successful = payments.filter(p => p.status === 'COMPLETED').length;
+    const failed = payments.filter(p => p.status === 'FAILED').length;
     const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
 
     return {
@@ -170,9 +170,9 @@ export class AnalyticsService {
 
     return {
       feedbackCount: {
-        positive: feedbacks.filter(f => f.sentiment === 'positive').length,
-        negative: feedbacks.filter(f => f.sentiment === 'negative').length,
-        neutral: feedbacks.filter(f => f.sentiment === 'neutral').length
+        positive: feedbacks.filter(f => f.sentiment === 'POSITIVE').length,
+        negative: feedbacks.filter(f => f.sentiment === 'NEGATIVE').length,
+        neutral: feedbacks.filter(f => f.sentiment === 'NEUTRAL').length
       }
     };
   }

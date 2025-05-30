@@ -34,12 +34,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUser = authService.getCurrentUser();
         if (savedUser) {
           setUser(savedUser);
-          setIsAuthenticated(true);
-        }
+      setIsAuthenticated(true);
+    }
       } catch (err) {
         console.error('Auth initialization error:', err);
       } finally {
-        setLoading(false);
+    setLoading(false);
       }
     };
 
@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await authService.logout();
       setUser(null);
-      setIsAuthenticated(false);
+    setIsAuthenticated(false);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Logout failed');
       throw err;

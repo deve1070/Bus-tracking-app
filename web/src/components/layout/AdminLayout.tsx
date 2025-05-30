@@ -6,6 +6,9 @@ import {
   LogOut,
   User,
 } from 'lucide-react';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -23,11 +26,28 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, navigation }
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    // Clear auth token and redirect to login
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await axios.post(`${API_URL}/auth/logout`, {}, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+      }
+      // Clear auth data
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      // Force refresh and redirect to login
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still clear local storage and redirect even if the API call fails
     localStorage.removeItem('token');
-    localStorage.removeItem('userRole');
-    navigate('/login');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
   };
 
   return (

@@ -21,7 +21,7 @@ export const register = async (req: Request, res: Response) => {
     
     if (existingUser) {
       if (existingUser.email === email) {
-        return res.status(400).json({ error: 'Email already registered' });
+      return res.status(400).json({ error: 'Email already registered' });
       }
       if (existingUser.username === username) {
         return res.status(400).json({ error: 'Username already taken' });

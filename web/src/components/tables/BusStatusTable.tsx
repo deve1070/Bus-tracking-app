@@ -1,23 +1,40 @@
 import React from 'react';
 import { Circle, MoreVertical } from 'lucide-react';
 
-// Sample data
-const buses = [
-  { id: 'BUS-001', route: 'Downtown - Airport', driver: 'John Smith', status: 'active', passengers: 32, lastLocation: 'Central Station', lastUpdated: '2 mins ago' },
-  { id: 'BUS-002', route: 'Westside Loop', driver: 'Maria Johnson', status: 'active', passengers: 28, lastLocation: 'Market Square', lastUpdated: '1 min ago' },
-  { id: 'BUS-003', route: 'East Express', driver: 'David Brown', status: 'active', passengers: 18, lastLocation: 'Tech Hub', lastUpdated: '5 mins ago' },
-  { id: 'BUS-004', route: 'North Route', driver: 'James Wilson', status: 'maintenance', passengers: 0, lastLocation: 'North Depot', lastUpdated: '3 hours ago' },
-  { id: 'BUS-005', route: 'South Beach', driver: 'Sarah Davis', status: 'active', passengers: 22, lastLocation: 'Ocean Drive', lastUpdated: '4 mins ago' },
-];
+interface BusStatus {
+  id: string;
+  route: string;
+  status: 'active' | 'maintenance' | 'offline';
+  passengers: number;
+  occupancy: number;
+  speed: number;
+  delay: number;
+}
 
-const BusStatusTable: React.FC = () => {
+interface BusStatusTableProps {
+  data: BusStatus[];
+  loading?: boolean;
+}
+
+const BusStatusTable: React.FC<BusStatusTableProps> = ({ data, loading = false }) => {
+  if (loading) {
+    return (
+      <div className="animate-pulse">
+        <div className="h-10 bg-gray-200 rounded mb-4"></div>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="h-12 bg-gray-200 rounded mb-2"></div>
+        ))}
+      </div>
+    );
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
         return 'text-green-500';
       case 'maintenance':
         return 'text-amber-500';
-      case 'out-of-service':
+      case 'offline':
         return 'text-red-500';
       default:
         return 'text-gray-500';
@@ -36,19 +53,19 @@ const BusStatusTable: React.FC = () => {
               Route
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Driver
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Status
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Passengers
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Last Location
+              Occupancy
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Last Updated
+              Speed
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Delay
             </th>
             <th scope="col" className="relative px-6 py-3">
               <span className="sr-only">Actions</span>
@@ -56,16 +73,13 @@ const BusStatusTable: React.FC = () => {
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {buses.map((bus) => (
+          {data.map((bus) => (
             <tr key={bus.id} className="hover:bg-gray-50">
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                 {bus.id}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {bus.route}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {bus.driver}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm">
                 <div className="flex items-center">
@@ -77,10 +91,13 @@ const BusStatusTable: React.FC = () => {
                 {bus.passengers}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {bus.lastLocation}
+                {bus.occupancy.toFixed(1)}%
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {bus.lastUpdated}
+                {bus.speed.toFixed(1)} km/h
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {bus.delay > 0 ? `${bus.delay.toFixed(0)} min` : 'On time'}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button className="text-gray-400 hover:text-gray-500">
