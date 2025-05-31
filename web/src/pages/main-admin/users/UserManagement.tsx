@@ -12,6 +12,7 @@ interface User {
   username: string;
   createdAt: string;
   stationId?: string | { _id: string; name: string }; // Accept both string and populated object
+  busId?: string | { _id: string; name: string }; // Added for Driver
 }
 
 interface UserFormData {
@@ -23,6 +24,7 @@ interface UserFormData {
   phoneNumber: string;
   username: string;
   stationId?: string; // Added for StationAdmin
+  busId?: string; // Added for Driver
 }
 
 interface Station {
@@ -30,9 +32,15 @@ interface Station {
   name: string;
 }
 
+interface Bus {
+  _id: string;
+  name: string;
+}
+
 const UserManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
+  const [buses, setBuses] = useState<Bus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -46,6 +54,7 @@ const UserManagement = () => {
     phoneNumber: '',
     username: '',
     stationId: '',
+    busId: '',
   });
 
   const { addNotification } = useNotification();
@@ -53,6 +62,7 @@ const UserManagement = () => {
   useEffect(() => {
     fetchUsers();
     fetchStations();
+    fetchBuses();
   }, []);
 
   const fetchUsers = async () => {
@@ -78,6 +88,16 @@ const UserManagement = () => {
       setStations(response.data);
     } catch (err) {
       console.error('Error fetching stations:', err);
+    }
+  };
+
+  const fetchBuses = async () => {
+    try {
+      const response = await api.get('/buses');
+      console.log('Fetched buses:', response.data); // Debug log
+      setBuses(response.data);
+    } catch (err) {
+      console.error('Error fetching buses:', err);
     }
   };
 
@@ -116,6 +136,7 @@ const UserManagement = () => {
         phoneNumber: '',
         username: '',
         stationId: '',
+        busId: '',
       });
       fetchUsers();
     } catch (err: any) {
@@ -141,6 +162,7 @@ const UserManagement = () => {
       username: user.username,
       // If stationId is an object, use its _id, else use the string
       stationId: typeof user.stationId === 'object' && user.stationId !== null ? user.stationId._id : user.stationId || '',
+      busId: typeof user.busId === 'object' && user.busId !== null ? user.busId._id : user.busId || '',
     });
     setIsModalOpen(true);
   };
@@ -198,6 +220,7 @@ const UserManagement = () => {
                 phoneNumber: '',
                 username: '',
                 stationId: '',
+                busId: '',
               });
               setIsModalOpen(true);
             }}
@@ -239,6 +262,9 @@ const UserManagement = () => {
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                       Station
                     </th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Bus
+                    </th>
                     <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                       <span className="sr-only">Actions</span>
                     </th>
@@ -259,6 +285,17 @@ const UserManagement = () => {
                           ? (user.stationId && typeof user.stationId === 'object'
                               ? user.stationId.name
                               : stations.find(s => s._id === user.stationId)?.name || 'N/A')
+                          : user.role === 'Driver'
+                            ? (user.busId && typeof user.busId === 'object'
+                                ? user.busId.name
+                                : buses.find(b => b._id === user.busId)?.name || 'N/A')
+                            : 'N/A'}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {user.role === 'Driver'
+                          ? (user.busId && typeof user.busId === 'object'
+                              ? user.busId.name
+                              : buses.find(b => b._id === user.busId)?.name || 'N/A')
                           : 'N/A'}
                       </td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
@@ -376,6 +413,24 @@ const UserManagement = () => {
                     {stations.map((station) => (
                       <option key={station._id} value={station._id}>
                         {station.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {formData.role === 'Driver' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Bus</label>
+                  <select
+                    value={formData.busId}
+                    onChange={(e) => setFormData({ ...formData, busId: e.target.value })}
+                    className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                    required
+                  >
+                    <option value="">Select a bus</option>
+                    {buses.map((bus) => (
+                      <option key={bus._id} value={bus._id}>
+                        {bus.name}
                       </option>
                     ))}
                   </select>

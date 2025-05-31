@@ -9,10 +9,14 @@ interface AuthRequest extends Request {
 // Get all users
 export const getUsers = async (req: AuthRequest, res: Response) => {
   try {
-    const users = await User.find().select('-password').populate('stationId');
+    const users = await User.find()
+      .select('-password')
+      .populate('stationId')
+      .populate('busId');
     res.json(users);
   } catch (error) {
-    res.status(400).json({ error: 'Failed to fetch users' });
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
   }
 };
 
@@ -35,23 +39,12 @@ export const getUserById = async (req: AuthRequest, res: Response) => {
 // Create new user
 export const createUser = async (req: AuthRequest, res: Response) => {
   try {
-    const { email, password, firstName, lastName, role, phoneNumber, username, stationId } = req.body;
+    const { email, password, firstName, lastName, role, phoneNumber, username, stationId, busId } = req.body;
 
     // Check if user already exists
-    const existingUser = await User.findOne({ 
-      $or: [
-        { email },
-        { username }
-      ]
-    });
-    
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
-      if (existingUser.email === email) {
-        return res.status(400).json({ error: 'Email already registered' });
-      }
-      if (existingUser.username === username) {
-        return res.status(400).json({ error: 'Username already taken' });
-      }
+      return res.status(400).json({ error: 'User with this email or username already exists' });
     }
 
     // Create new user
@@ -60,28 +53,23 @@ export const createUser = async (req: AuthRequest, res: Response) => {
       password,
       firstName,
       lastName,
-      role: role || UserRole.DRIVER,
+      role,
       phoneNumber,
       username,
-      stationId: role === UserRole.STATION_ADMIN ? stationId : undefined
+      stationId: role === UserRole.STATION_ADMIN ? stationId : undefined,
+      busId: role === UserRole.DRIVER ? busId : undefined
     });
 
     await user.save();
 
-    // Return user without password
+    // Remove password from response
     const userResponse = user.toObject();
-    const { password: _, ...userWithoutPassword } = userResponse;
+    delete userResponse.password;
 
-    res.status(201).json(userWithoutPassword);
-  } catch (error: any) {
-    console.error('User creation error:', error);
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ 
-        error: 'Validation failed', 
-        details: Object.values(error.errors).map((err: any) => err.message)
-      });
-    }
-    res.status(400).json({ error: 'User creation failed', details: error.message });
+    res.status(201).json(userResponse);
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Failed to create user' });
   }
 };
 
@@ -89,7 +77,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
 export const updateUser = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { email, password, firstName, lastName, role, phoneNumber, username, stationId } = req.body;
+    const { email, password, firstName, lastName, role, phoneNumber, username, stationId, busId } = req.body;
 
     // Check if user exists
     const user = await User.findById(id);
@@ -97,58 +85,30 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Check for duplicate email/username if they're being changed
-    if (email !== user.email || username !== user.username) {
-      const existingUser = await User.findOne({
-        _id: { $ne: id },
-        $or: [
-          { email },
-          { username }
-        ]
-      });
-
-      if (existingUser) {
-        if (existingUser.email === email) {
-          return res.status(400).json({ error: 'Email already registered' });
-        }
-        if (existingUser.username === username) {
-          return res.status(400).json({ error: 'Username already taken' });
-        }
-      }
-    }
-
     // Update user fields
-    const updateData: any = {
-      email,
-      firstName,
-      lastName,
-      role,
-      phoneNumber,
-      username,
-      stationId: role === UserRole.STATION_ADMIN ? stationId : undefined
-    };
+    user.email = email || user.email;
+    user.firstName = firstName || user.firstName;
+    user.lastName = lastName || user.lastName;
+    user.role = role || user.role;
+    user.phoneNumber = phoneNumber || user.phoneNumber;
+    user.username = username || user.username;
+    user.stationId = role === UserRole.STATION_ADMIN ? stationId : undefined;
+    user.busId = role === UserRole.DRIVER ? busId : undefined;
 
-    // Only update password if provided
     if (password) {
-      updateData.password = password;
+      user.password = password;
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).select('-password');
+    await user.save();
 
-    res.json(updatedUser);
-  } catch (error: any) {
-    console.error('User update error:', error);
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ 
-        error: 'Validation failed', 
-        details: Object.values(error.errors).map((err: any) => err.message)
-      });
-    }
-    res.status(400).json({ error: 'User update failed', details: error.message });
+    // Remove password from response
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    res.json(userResponse);
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Failed to update user' });
   }
 };
 

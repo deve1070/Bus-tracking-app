@@ -17,6 +17,7 @@ export interface IUser extends Document {
   phoneNumber: string;
   username: string;
   stationId?: mongoose.Types.ObjectId;
+  busId?: mongoose.Types.ObjectId;
   firebaseUid?: string;
   deviceToken?: string;
   resetPasswordToken?: string;
@@ -72,6 +73,13 @@ const userSchema = new Schema<IUser>({
     ref: 'Station',
     required: function() {
       return this.role === UserRole.STATION_ADMIN;
+    }
+  },
+  busId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Bus',
+    required: function() {
+      return this.role === UserRole.DRIVER;
     }
   },
   firebaseUid: {
