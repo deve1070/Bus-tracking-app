@@ -1,18 +1,19 @@
 {
-  "name": "server",
+  "name": "bus-tracking-server",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Backend server for bus tracking application",
+  "main": "dist/server.js",
   "scripts": {
-  "test": "echo \"Error: no test specified\" && exit 1",
-  "start": "node dist/server.js",
-  "build": "tsc",
-  "dev": "nodemon server.ts"
-
+    "start": "node dist/server.js",
+    "dev": "ts-node server.ts",
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "devDependencies": {
     "@types/mongoose": "^5.11.96",
     "@types/socket.io": "^3.0.1",
@@ -30,6 +31,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "firebase-admin": "^13.4.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.15.0",
     "natural": "^8.0.1",

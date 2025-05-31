@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
-import { Notification, User } from '../models';
+import { User, Bus } from '../models';
 import { FirebaseService } from '../services/firebaseService';
+import NotificationModel, { INotification } from '../models/Notification';
+import { AuthRequest } from '../types/express';
+import mongoose from 'mongoose';
 
 interface NotificationRequest extends Request {
   user?: {
@@ -23,12 +26,14 @@ export const sendNotification = async (req: NotificationRequest, res: Response) 
     }
 
     // Create notification record
-    const notification = new Notification({
-      recipient: recipientId,
+    const notification = new NotificationModel({
+      title: 'New Notification',
       message,
       type,
+      recipients: [new mongoose.Types.ObjectId(recipientId)],
+      status: 'pending',
       read: false
-    });
+    }) as INotification;
 
     await notification.save();
 
@@ -39,7 +44,7 @@ export const sendNotification = async (req: NotificationRequest, res: Response) 
         body: message,
         data: {
           type,
-          notificationId: notification._id.toString()
+          notificationId: notification.id.toString()
         }
       });
     }
@@ -68,12 +73,14 @@ export const sendBulkNotification = async (req: NotificationRequest, res: Respon
 
     for (const user of users) {
       // Create notification record
-      const notification = new Notification({
-        recipient: user._id,
+      const notification = new NotificationModel({
+        title: 'New Notification',
         message,
         type,
+        recipients: [new mongoose.Types.ObjectId(user.id.toString())],
+        status: 'pending',
         read: false
-      });
+      }) as INotification;
 
       await notification.save();
       notifications.push(notification);
@@ -85,7 +92,7 @@ export const sendBulkNotification = async (req: NotificationRequest, res: Respon
           body: message,
           data: {
             type,
-            notificationId: notification._id.toString()
+            notificationId: notification.id.toString()
           }
         });
       }
@@ -101,20 +108,67 @@ export const sendBulkNotification = async (req: NotificationRequest, res: Respon
   }
 };
 
-export const getNotifications = async (req: NotificationRequest, res: Response) => {
+export const getNotifications = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?._id;
-    if (!userId) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    const notifications = await Notification.find({ recipient: userId })
-      .sort({ createdAt: -1 });
-
+    const notifications = await NotificationModel.find().sort({ createdAt: -1 });
     res.json(notifications);
   } catch (error) {
-    console.error('Error getting notifications:', error);
-    res.status(500).json({ message: 'Error getting notifications' });
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+};
+
+export const createNotification = async (req: Request, res: Response) => {
+  try {
+    const { title, message, type, recipients } = req.body;
+    const notification = new NotificationModel({
+      title,
+      message,
+      type,
+      recipients: recipients.map((id: string) => new mongoose.Types.ObjectId(id)),
+      status: 'pending',
+      read: false
+    });
+    await notification.save();
+    res.status(201).json(notification);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create notification' });
+  }
+};
+
+export const updateNotification = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, message, type, recipients, status } = req.body;
+    const notification = await NotificationModel.findByIdAndUpdate(
+      id,
+      { 
+        title, 
+        message, 
+        type, 
+        recipients: recipients.map((id: string) => new mongoose.Types.ObjectId(id)),
+        status 
+      },
+      { new: true }
+    );
+    if (!notification) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+    res.json(notification);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update notification' });
+  }
+};
+
+export const deleteNotification = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const notification = await NotificationModel.findByIdAndDelete(id);
+    if (!notification) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+    res.json({ message: 'Notification deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete notification' });
   }
 };
 
@@ -127,9 +181,9 @@ export const markAsRead = async (req: NotificationRequest, res: Response) => {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const notification = await Notification.findOne({
+    const notification = await NotificationModel.findOne({
       _id: notificationId,
-      recipient: userId
+      recipients: new mongoose.Types.ObjectId(userId)
     });
 
     if (!notification) {
@@ -177,7 +231,7 @@ export const notifyAllDrivers = async (req: AuthRequest, res: Response) => {
     const { title, body, data } = req.body;
 
     const drivers = await User.find({ role: 'Driver', deviceToken: { $exists: true } });
-    const deviceTokens = drivers.map(driver => driver.deviceToken);
+    const deviceTokens = drivers.map(driver => driver.deviceToken).filter(Boolean) as string[];
 
     if (deviceTokens.length === 0) {
       return res.status(404).json({ error: 'No drivers with device tokens found' });

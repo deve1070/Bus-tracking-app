@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
+import { useNotification } from '../../../contexts/NotificationContext';
 
 interface User {
   _id: string;
@@ -38,6 +39,8 @@ const UserManagement = () => {
     username: '',
   });
 
+  const { addNotification } = useNotification();
+
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -48,6 +51,11 @@ const UserManagement = () => {
       setUsers(response.data);
     } catch (err) {
       setError('Failed to fetch users');
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to fetch users. Please try again.',
+      });
       console.error('Error fetching users:', err);
     } finally {
       setLoading(false);
@@ -64,8 +72,18 @@ const UserManagement = () => {
           delete (dataToSend as any).password;
         }
         await api.put(`/users/${selectedUser._id}`, dataToSend);
+        addNotification({
+          type: 'success',
+          title: 'Success',
+          message: 'User updated successfully',
+        });
       } else {
         await api.post('/users', formData);
+        addNotification({
+          type: 'success',
+          title: 'Success',
+          message: 'User created successfully',
+        });
       }
 
       setIsModalOpen(false);
@@ -80,8 +98,13 @@ const UserManagement = () => {
         username: '',
       });
       fetchUsers();
-    } catch (err) {
-      setError('Failed to save user');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'Failed to save user';
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: errorMessage,
+      });
       console.error('Error saving user:', err);
     }
   };
@@ -104,9 +127,19 @@ const UserManagement = () => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         await api.delete(`/users/${userId}`);
+        addNotification({
+          type: 'success',
+          title: 'Success',
+          message: 'User deleted successfully',
+        });
         fetchUsers();
-      } catch (err) {
-        setError('Failed to delete user');
+      } catch (err: any) {
+        const errorMessage = err.response?.data?.error || 'Failed to delete user';
+        addNotification({
+          type: 'error',
+          title: 'Error',
+          message: errorMessage,
+        });
         console.error('Error deleting user:', err);
       }
     }

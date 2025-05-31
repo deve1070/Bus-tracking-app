@@ -48,7 +48,6 @@ const routeSchema = new Schema<IRoute>({
   timestamps: true
 });
 
-// Index for route number lookups
-routeSchema.index({ routeNumber: 1 });
+// No need for additional indexes since routeNumber is already unique in schema
 
 export const Route = mongoose.model<IRoute>('Route', routeSchema); 

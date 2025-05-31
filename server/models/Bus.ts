@@ -130,6 +130,5 @@ const busSchema = new Schema<IBus>({
 
 // Create geospatial index for location queries
 busSchema.index({ currentLocation: '2dsphere' });
-busSchema.index({ deviceId: 1 });
 
 export const Bus = mongoose.model<IBus>('Bus', busSchema); 

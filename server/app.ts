@@ -9,6 +9,7 @@ import feedbackRoutes from './routes/feedback';
 import routeRoutes from './routes/route';
 import analyticsRoutes from './routes/analytics';
 import userRoutes from './routes/userRoutes';
+import notificationRoutes from './routes/notification';
 
 // Load environment variables
 dotenv.config();
@@ -48,6 +49,7 @@ app.use('/api/routes', routeRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -61,6 +63,11 @@ app.use((req, res, next) => {
     res.status(408).json({ error: 'Request timeout' });
   });
   next();
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
 
 export default app;

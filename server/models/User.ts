@@ -101,10 +101,7 @@ userSchema.methods.comparePassword = async function(candidatePassword: string): 
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Indexes
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
-userSchema.index({ firebaseUid: 1 }, { sparse: true });
+// Only keep the resetPasswordToken index since it's not defined in the schema
 userSchema.index({ resetPasswordToken: 1 });
 
 export const User = mongoose.model<IUser>('User', userSchema); 

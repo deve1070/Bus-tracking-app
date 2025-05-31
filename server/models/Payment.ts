@@ -71,6 +71,5 @@ const paymentSchema = new Schema<IPayment>({
 
 // Indexes for faster queries
 paymentSchema.index({ userId: 1, createdAt: -1 });
-paymentSchema.index({ transactionReference: 1 }, { unique: true });
 
 export const Payment = mongoose.model<IPayment>('Payment', paymentSchema); 

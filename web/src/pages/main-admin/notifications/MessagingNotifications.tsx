@@ -1,25 +1,39 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../../services/api';
+import { useNotification } from '../../../contexts/NotificationContext';
 
 interface Notification {
-  id: string;
+  _id: string;
   title: string;
   message: string;
   type: 'info' | 'warning' | 'success' | 'error';
-  createdAt: string;
   status: 'sent' | 'pending' | 'failed';
   recipients: string[];
+  createdAt: string;
+}
+
+interface NotificationForm {
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  notificationType: 'all' | 'drivers' | 'route' | 'station';
+  routeId?: string;
+  stationId?: string;
+  data?: Record<string, string>;
 }
 
 const MessagingNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [newNotification, setNewNotification] = useState({
+  const [newNotification, setNewNotification] = useState<NotificationForm>({
     title: '',
     message: '',
-    type: 'info' as const,
-    recipients: [] as string[],
+    type: 'info',
+    notificationType: 'all',
   });
+
+  const { addNotification } = useNotification();
 
   useEffect(() => {
     fetchNotifications();
@@ -27,16 +41,17 @@ const MessagingNotifications = () => {
 
   const fetchNotifications = async () => {
     try {
-      // TODO: Implement API call to backend
-      const response = await fetch('/api/notifications');
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data);
-      } else {
-        setError('Failed to fetch notifications');
-      }
-    } catch (err) {
-      setError('An error occurred while fetching notifications');
+      const response = await api.get('/notifications');
+      setNotifications(response.data);
+      setError('');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'Failed to fetch notifications';
+      setError(errorMessage);
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
@@ -45,27 +60,69 @@ const MessagingNotifications = () => {
   const handleSendNotification = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newNotification),
-      });
+      let endpoint = '/notifications';
+      let payload = { ...newNotification };
 
-      if (response.ok) {
-        setNewNotification({
-          title: '',
-          message: '',
-          type: 'info',
-          recipients: [],
-        });
-        fetchNotifications();
-      } else {
-        setError('Failed to send notification');
+      switch (newNotification.notificationType) {
+        case 'drivers':
+          endpoint = '/notifications/drivers';
+          break;
+        case 'route':
+          if (!newNotification.routeId) {
+            throw new Error('Route ID is required for route notifications');
+          }
+          endpoint = '/notifications/route';
+          payload = {
+            routeId: newNotification.routeId,
+            title: newNotification.title,
+            message: newNotification.message,
+            type: newNotification.type,
+            notificationType: newNotification.notificationType,
+            data: {
+              type: newNotification.type,
+              routeId: newNotification.routeId
+            }
+          };
+          break;
+        case 'station':
+          if (!newNotification.stationId) {
+            throw new Error('Station ID is required for station notifications');
+          }
+          endpoint = '/notifications/station';
+          payload = {
+            stationId: newNotification.stationId,
+            title: newNotification.title,
+            message: newNotification.message,
+            type: newNotification.type,
+            notificationType: newNotification.notificationType,
+            data: {
+              type: newNotification.type,
+              stationId: newNotification.stationId
+            }
+          };
+          break;
       }
-    } catch (err) {
-      setError('An error occurred while sending notification');
+
+      await api.post(endpoint, payload);
+      addNotification({
+        type: 'success',
+        title: 'Success',
+        message: 'Notification sent successfully',
+      });
+      setNewNotification({
+        title: '',
+        message: '',
+        type: 'info',
+        notificationType: 'all',
+      });
+      fetchNotifications();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to send notification';
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: errorMessage,
+      });
     }
   };
 
@@ -131,18 +188,53 @@ const MessagingNotifications = () => {
           </div>
 
           <div>
-            <label htmlFor="recipients" className="block text-sm font-medium text-gray-700">
-              Recipients (comma-separated)
+            <label htmlFor="notificationType" className="block text-sm font-medium text-gray-700">
+              Send To
             </label>
-            <input
-              type="text"
-              id="recipients"
-              value={newNotification.recipients.join(', ')}
-              onChange={(e) => setNewNotification({ ...newNotification, recipients: e.target.value.split(',').map(r => r.trim()) })}
+            <select
+              id="notificationType"
+              value={newNotification.notificationType}
+              onChange={(e) => setNewNotification({ ...newNotification, notificationType: e.target.value as any })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-3"
-              placeholder="user1@example.com, user2@example.com"
-            />
+            >
+              <option value="all">All Users</option>
+              <option value="drivers">All Drivers</option>
+              <option value="route">Route Passengers</option>
+              <option value="station">Station Passengers</option>
+            </select>
           </div>
+
+          {newNotification.notificationType === 'route' && (
+            <div>
+              <label htmlFor="routeId" className="block text-sm font-medium text-gray-700">
+                Route ID
+              </label>
+              <input
+                type="text"
+                id="routeId"
+                value={newNotification.routeId || ''}
+                onChange={(e) => setNewNotification({ ...newNotification, routeId: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-3"
+                required
+              />
+            </div>
+          )}
+
+          {newNotification.notificationType === 'station' && (
+            <div>
+              <label htmlFor="stationId" className="block text-sm font-medium text-gray-700">
+                Station ID
+              </label>
+              <input
+                type="text"
+                id="stationId"
+                value={newNotification.stationId || ''}
+                onChange={(e) => setNewNotification({ ...newNotification, stationId: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-3"
+                required
+              />
+            </div>
+          )}
 
           <button
             type="submit"
@@ -167,7 +259,7 @@ const MessagingNotifications = () => {
           ) : (
             notifications.map((notification) => (
               <div
-                key={notification.id}
+                key={notification._id}
                 className={`p-4 rounded-lg ${
                   notification.type === 'info'
                     ? 'bg-blue-50'
@@ -182,24 +274,26 @@ const MessagingNotifications = () => {
                   <div>
                     <h3 className="text-sm font-medium text-gray-900">{notification.title}</h3>
                     <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Sent to {notification.recipients.length} recipients
+                    </p>
                   </div>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      notification.status === 'sent'
-                        ? 'bg-green-100 text-green-800'
-                        : notification.status === 'pending'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {notification.status}
-                  </span>
-                </div>
-                <div className="mt-2 text-xs text-gray-500">
-                  Sent to: {notification.recipients.join(', ')}
-                </div>
-                <div className="mt-1 text-xs text-gray-500">
-                  {new Date(notification.createdAt).toLocaleString()}
+                  <div className="flex flex-col items-end">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        notification.status === 'sent'
+                          ? 'bg-green-100 text-green-800'
+                          : notification.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {notification.status}
+                    </span>
+                    <span className="mt-2 text-xs text-gray-500">
+                      {new Date(notification.createdAt).toLocaleString()}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))
