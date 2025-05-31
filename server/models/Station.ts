@@ -9,6 +9,7 @@ export interface IStation extends Document {
   address: string;
   description?: string;
   adminId?: mongoose.Types.ObjectId;
+  stationId?: string;
 }
 
 const stationSchema = new Schema<IStation>({
@@ -37,7 +38,12 @@ const stationSchema = new Schema<IStation>({
   },
   adminId: {
     type: Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    required: false
+  },
+  stationId: {
+    type: String,
+    required: false
   }
 }, {
   timestamps: true

@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { PaymentService } from '../services/paymentService';
 import { Payment, Route } from '../models';
-import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config';
 
 interface AuthRequest extends Request {
@@ -28,7 +27,7 @@ export const estimateFare = async (req: AuthRequest, res: Response) => {
     }
 
     // Calculate fare based on route distance or fixed price
-    const estimatedFare = route.fare || 0;
+    const estimatedFare = (route as any).fare || 0;
 
     res.json({
       routeId,
@@ -92,17 +91,17 @@ export const initializePayment = async (req: PaymentRequest, res: Response) => {
         tx_ref
       });
 
-      if (qrData && 'data' in qrData && 'qr_code' in qrData.data) {
-      qrCode = qrData.data.qr_code;
+      if (qrData && typeof qrData === 'object' && 'data' in qrData && qrData.data && typeof qrData.data === 'object' && 'qr_code' in qrData.data) {
+        qrCode = qrData.data.qr_code as string;
         payment.metadata = { qrCode };
-      await payment.save();
+        await payment.save();
       }
     }
 
     res.json({
       message: 'Payment initialized successfully',
       paymentId: payment._id,
-      checkoutUrl: paymentData.data.checkout_url,
+      checkoutUrl: (paymentData as any).data.checkout_url,
       qrCode
     });
   } catch (error) {
@@ -129,9 +128,9 @@ export const verifyPayment = async (req: Request, res: Response) => {
     const verification = await PaymentService.verifyPayment(tx_ref as string);
 
     // Update payment status
-    payment.status = verification.status === 'success' ? 'completed' : 'failed';
-      payment.receiptUrl = verification.receipt_url;
-      await payment.save();
+    payment.status = (verification as any).status === 'success' ? 'COMPLETED' : 'FAILED';
+    payment.receiptUrl = (verification as any).receipt_url;
+    await payment.save();
 
     res.json({
       message: 'Payment verification completed',

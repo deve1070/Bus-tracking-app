@@ -4,7 +4,7 @@ import {
   initializePayment,
   verifyPayment,
   getPaymentHistory,
-  downloadReceipt
+  getPaymentReceipt
 } from '../controllers/paymentController';
 import { auth } from '../middleware/auth';
 
@@ -24,6 +24,6 @@ router.get('/verify', verifyPayment as RequestHandler);
 router.get('/history', getPaymentHistory as RequestHandler);
 
 // Download receipt
-router.get('/receipt/:paymentId', downloadReceipt as RequestHandler);
+router.get('/receipt/:paymentId', getPaymentReceipt as RequestHandler);
 
 export default router; 

@@ -9,7 +9,7 @@ interface AuthRequest extends Request {
 // Get all users
 export const getUsers = async (req: AuthRequest, res: Response) => {
   try {
-    const users = await User.find().select('-password');
+    const users = await User.find().select('-password').populate('stationId');
     res.json(users);
   } catch (error) {
     res.status(400).json({ error: 'Failed to fetch users' });
@@ -35,7 +35,7 @@ export const getUserById = async (req: AuthRequest, res: Response) => {
 // Create new user
 export const createUser = async (req: AuthRequest, res: Response) => {
   try {
-    const { email, password, firstName, lastName, role, phoneNumber, username } = req.body;
+    const { email, password, firstName, lastName, role, phoneNumber, username, stationId } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ 
@@ -62,7 +62,8 @@ export const createUser = async (req: AuthRequest, res: Response) => {
       lastName,
       role: role || UserRole.DRIVER,
       phoneNumber,
-      username
+      username,
+      stationId: role === UserRole.STATION_ADMIN ? stationId : undefined
     });
 
     await user.save();
@@ -88,7 +89,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
 export const updateUser = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { email, password, firstName, lastName, role, phoneNumber, username } = req.body;
+    const { email, password, firstName, lastName, role, phoneNumber, username, stationId } = req.body;
 
     // Check if user exists
     const user = await User.findById(id);
@@ -123,7 +124,8 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       lastName,
       role,
       phoneNumber,
-      username
+      username,
+      stationId: role === UserRole.STATION_ADMIN ? stationId : undefined
     };
 
     // Only update password if provided

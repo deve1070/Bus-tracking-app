@@ -11,6 +11,7 @@ interface User {
   phoneNumber: string;
   username: string;
   createdAt: string;
+  stationId?: string | { _id: string; name: string }; // Accept both string and populated object
 }
 
 interface UserFormData {
@@ -21,10 +22,17 @@ interface UserFormData {
   role: User['role'];
   phoneNumber: string;
   username: string;
+  stationId?: string; // Added for StationAdmin
+}
+
+interface Station {
+  _id: string;
+  name: string;
 }
 
 const UserManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [stations, setStations] = useState<Station[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -37,12 +45,14 @@ const UserManagement = () => {
     role: 'Driver',
     phoneNumber: '',
     username: '',
+    stationId: '',
   });
 
   const { addNotification } = useNotification();
 
   useEffect(() => {
     fetchUsers();
+    fetchStations();
   }, []);
 
   const fetchUsers = async () => {
@@ -59,6 +69,15 @@ const UserManagement = () => {
       console.error('Error fetching users:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStations = async () => {
+    try {
+      const response = await api.get('/stations');
+      setStations(response.data);
+    } catch (err) {
+      console.error('Error fetching stations:', err);
     }
   };
 
@@ -96,6 +115,7 @@ const UserManagement = () => {
         role: 'Driver',
         phoneNumber: '',
         username: '',
+        stationId: '',
       });
       fetchUsers();
     } catch (err: any) {
@@ -119,6 +139,8 @@ const UserManagement = () => {
       role: user.role,
       phoneNumber: user.phoneNumber,
       username: user.username,
+      // If stationId is an object, use its _id, else use the string
+      stationId: typeof user.stationId === 'object' && user.stationId !== null ? user.stationId._id : user.stationId || '',
     });
     setIsModalOpen(true);
   };
@@ -175,6 +197,7 @@ const UserManagement = () => {
                 role: 'Driver',
                 phoneNumber: '',
                 username: '',
+                stationId: '',
               });
               setIsModalOpen(true);
             }}
@@ -214,7 +237,7 @@ const UserManagement = () => {
                       Phone
                     </th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Created At
+                      Station
                     </th>
                     <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                       <span className="sr-only">Actions</span>
@@ -225,18 +248,18 @@ const UserManagement = () => {
                   {users.map((user) => (
                     <tr key={user._id}>
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                        {`${user.firstName} ${user.lastName}`}
+                        {user.firstName} {user.lastName}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.email}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.username}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {user.role}
-                        </span>
-                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.role}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.phoneNumber}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {user.role === 'StationAdmin'
+                          ? (user.stationId && typeof user.stationId === 'object'
+                              ? user.stationId.name
+                              : stations.find(s => s._id === user.stationId)?.name || 'N/A')
+                          : 'N/A'}
                       </td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                         <button
@@ -261,107 +284,58 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-            <h2 className="text-lg font-medium mb-4">
-              {selectedUser ? 'Edit User' : 'Add New User'}
-            </h2>
-            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-lg font-medium mb-4">{selectedUser ? 'Edit User' : 'Add User'}</h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                  First Name
-                </label>
+                <label className="block text-sm font-medium text-gray-700">First Name</label>
                 <input
                   type="text"
-                  id="firstName"
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
+                  className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                   required
                 />
               </div>
-
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                  Last Name
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Last Name</label>
                 <input
                   type="text"
-                  id="lastName"
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
+                  className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                   required
                 />
               </div>
-
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Email</label>
                 <input
                   type="email"
-                  id="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
+                  className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                   required
                 />
               </div>
-
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  id="username"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  id="phoneNumber"
-                  value={formData.phoneNumber}
-                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password {selectedUser && '(leave blank to keep current)'}
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Password</label>
                 <input
                   type="password"
-                  id="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
+                  className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                   required={!selectedUser}
                 />
               </div>
-
               <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                  Role
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Role</label>
                 <select
-                  id="role"
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value as User['role'] })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2"
+                  className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                  required
                 >
                   <option value="MainAdmin">Main Admin</option>
                   <option value="StationAdmin">Station Admin</option>
@@ -369,20 +343,57 @@ const UserManagement = () => {
                   <option value="Passenger">Passenger</option>
                 </select>
               </div>
-
-              <div className="col-span-2 flex justify-end space-x-3 mt-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Phone Number</label>
+                <input
+                  type="tel"
+                  value={formData.phoneNumber}
+                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Username</label>
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                  required
+                />
+              </div>
+              {formData.role === 'StationAdmin' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Station</label>
+                  <select
+                    value={formData.stationId}
+                    onChange={(e) => setFormData({ ...formData, stationId: e.target.value })}
+                    className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                    required
+                  >
+                    <option value="">Select a station</option>
+                    {stations.map((station) => (
+                      <option key={station._id} value={station._id}>
+                        {station.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="flex justify-end space-x-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
-                  {selectedUser ? 'Update User' : 'Add User'}
+                  {selectedUser ? 'Update' : 'Create'}
                 </button>
               </div>
             </form>

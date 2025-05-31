@@ -10,6 +10,8 @@ import routeRoutes from './routes/route';
 import analyticsRoutes from './routes/analytics';
 import userRoutes from './routes/userRoutes';
 import notificationRoutes from './routes/notification';
+import paymentRoutes from './routes/payment';
+import settingsRoutes from './routes/settings';
 
 // Load environment variables
 dotenv.config();
@@ -50,6 +52,8 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

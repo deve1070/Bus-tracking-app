@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
+import api from '../../../services/api';
 
 interface SystemSettings {
   systemName: string;
@@ -21,11 +22,36 @@ const Settings: React.FC = () => {
     defaultLanguage: 'en',
     timeZone: 'UTC',
   });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const response = await api.get('/settings');
+      setSettings(response.data);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      setMessage({ type: 'error', text: 'Failed to load settings' });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically save the settings to your backend
-    console.log('Settings saved:', settings);
+    setLoading(true);
+    setMessage(null);
+    try {
+      await api.post('/settings', settings);
+      setMessage({ type: 'success', text: 'Settings saved successfully' });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      setMessage({ type: 'error', text: 'Failed to save settings' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,6 +61,13 @@ const Settings: React.FC = () => {
       </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         <div className="py-4">
+          {message && (
+            <div className={`mb-4 p-4 rounded-md ${
+              message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+            }`}>
+              {message.text}
+            </div>
+          )}
           <div className="bg-white shadow rounded-lg">
             <form onSubmit={handleSubmit} className="space-y-6 p-6">
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -174,10 +207,13 @@ const Settings: React.FC = () => {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  disabled={loading}
+                  className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                    loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
+                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Save Settings
+                  {loading ? 'Saving...' : 'Save Settings'}
                 </button>
               </div>
             </form>
