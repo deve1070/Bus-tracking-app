@@ -349,4 +349,38 @@ export const assignDriver = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     res.status(400).json({ error: 'Failed to assign driver' });
   }
+};
+
+export const getBusLocations = async (req: AuthRequest, res: Response) => {
+  try {
+    const stationId = req.user.stationId;
+    if (!stationId) {
+      return res.status(403).json({ error: 'Not authorized to access bus locations' });
+    }
+
+    // Find all buses assigned to this station
+    const buses = await Bus.find({
+      'route.stations': stationId,
+      status: { $in: ['ACTIVE', 'INACTIVE'] }
+    }).select('deviceId currentLocation status trackingData lastUpdateTime busNumber routeNumber');
+
+    const locations = buses.map(bus => ({
+      deviceId: bus.deviceId,
+      busNumber: bus.busNumber,
+      routeNumber: bus.routeNumber,
+      location: {
+        lat: bus.currentLocation.coordinates[1],
+        lng: bus.currentLocation.coordinates[0]
+      },
+      speed: bus.trackingData?.speed || 0,
+      heading: bus.trackingData?.heading || 0,
+      status: bus.status.toLowerCase(),
+      lastUpdate: bus.lastUpdateTime
+    }));
+
+    res.json(locations);
+  } catch (error) {
+    console.error('Error getting bus locations:', error);
+    res.status(500).json({ error: 'Failed to fetch bus locations' });
+  }
 }; 

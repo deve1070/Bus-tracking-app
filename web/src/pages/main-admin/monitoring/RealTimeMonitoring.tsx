@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 import { Bus, Clock, MapPin, RefreshCw, Filter } from 'lucide-react';
-
-// Initial map center (example coordinates)
-const center = { lat: 9.0227, lng: 38.7468 }; // Addis Ababa coordinates
+import RealTimeMapVisualization from '../../station-admin/monitoring/components/RealTimeMapVisualization';
 
 // Sample bus data
 const busData = [
@@ -27,39 +24,14 @@ const stationData = [
 const googleMapsApiKey = "YOUR_API_KEY_HERE";
 
 const RealTimeMonitoring: React.FC = () => {
-  const [selectedBus, setSelectedBus] = useState<any>(null);
   const [showStations, setShowStations] = useState(true);
   const [filteredRoutes, setFilteredRoutes] = useState<string[]>([]);
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
-
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey,
-  });
 
   const refreshData = () => {
     // In a real app, this would fetch new data from the API
     setLastRefreshed(new Date());
   };
-
-  // For demo purposes, just show a placeholder
-  if (!isLoaded) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Real-Time Monitoring</h1>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm h-[600px] flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading map... (API key required for actual map)</p>
-            <p className="text-sm text-gray-400 mt-2">For actual implementation, a valid Google Maps API key is needed</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -92,7 +64,7 @@ const RealTimeMonitoring: React.FC = () => {
                 <label className="flex items-center space-x-2">
                   <input 
                     type="checkbox" 
-                    checked={showStations} 
+                    defaultChecked={showStations} 
                     onChange={() => setShowStations(!showStations)}
                     className="rounded text-blue-700 focus:ring-blue-500"
                   />
@@ -104,15 +76,15 @@ const RealTimeMonitoring: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Bus Status</label>
                 <div className="space-y-1">
                   <label className="flex items-center space-x-2">
-                    <input type="checkbox" checked className="rounded text-blue-700 focus:ring-blue-500" />
+                    <input type="checkbox" defaultChecked className="rounded text-blue-700 focus:ring-blue-500" />
                     <span>Active</span>
                   </label>
                   <label className="flex items-center space-x-2">
-                    <input type="checkbox" checked className="rounded text-blue-700 focus:ring-blue-500" />
+                    <input type="checkbox" defaultChecked className="rounded text-blue-700 focus:ring-blue-500" />
                     <span>Maintenance</span>
                   </label>
                   <label className="flex items-center space-x-2">
-                    <input type="checkbox" checked className="rounded text-blue-700 focus:ring-blue-500" />
+                    <input type="checkbox" defaultChecked className="rounded text-blue-700 focus:ring-blue-500" />
                     <span>Out of Service</span>
                   </label>
                 </div>
@@ -163,27 +135,7 @@ const RealTimeMonitoring: React.FC = () => {
         <div className="md:col-span-3">
           <div className="bg-white p-4 rounded-lg shadow-sm">
             <div className="h-[600px] rounded-lg overflow-hidden border border-gray-200">
-              {/* Map would be rendered here in a real implementation */}
-              <div className="h-full bg-gray-100 flex items-center justify-center">
-                <div className="text-center p-6 max-w-md">
-                  <Bus size={48} className="text-blue-700 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Real-Time Map Visualization</h3>
-                  <p className="text-gray-500 mb-4">
-                    This is a placeholder for the Google Maps integration. In a real deployment, you would see a live map
-                    showing bus locations and stations with real-time updates.
-                  </p>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="bg-blue-50 p-3 rounded-lg flex items-center">
-                      <Bus size={16} className="text-blue-700 mr-2" />
-                      <span>5 Buses Active</span>
-                    </div>
-                    <div className="bg-green-50 p-3 rounded-lg flex items-center">
-                      <MapPin size={16} className="text-green-700 mr-2" />
-                      <span>5 Stations</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <RealTimeMapVisualization />
             </div>
           </div>
         </div>

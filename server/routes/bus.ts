@@ -8,7 +8,8 @@ import {
   updateBusLocation,
   assignDriver,
   calculateRoute,
-  getBusTrackingInfo
+  getBusTrackingInfo,
+  getBusLocations
 } from '../controllers/busController';
 import { auth, checkRole } from '../middleware/auth';
 import { UserRole } from '../models';
@@ -37,6 +38,7 @@ router.post('/:id/location', checkRole([UserRole.DRIVER]), updateBusLocation as 
 // Route for assigning drivers (main admin only)
 router.post('/:id/assign-driver', checkRole([UserRole.MAIN_ADMIN]), assignDriver as RequestHandler);
 
-
+// Get all bus locations for a station
+router.get('/locations', checkRole([UserRole.STATION_ADMIN]), getBusLocations as RequestHandler);
 
 export default router; 
