@@ -1,9 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { Feedback } from '../../../types';
 import { API_BASE_URL } from '../../../config';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
+
+interface Feedback {
+  _id: string;
+  type: 'COMPLAINT' | 'SUGGESTION' | 'PRAISE';
+  category: string;
+  message: string;
+  sentiment: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
+  status: 'PENDING' | 'IN_PROGRESS' | 'RESOLVED';
+  response?: string;
+  createdAt: string;
+  userId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
+
+interface FeedbackAnalytics {
+  overall: Array<{
+    _id: {
+      type: string;
+      sentiment: string;
+      status: string;
+    };
+    count: number;
+  }>;
+  byCategory: Array<{
+    _id: string;
+    count: number;
+    avgSentiment: number;
+  }>;
+}
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const FeedbackManagement = () => {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [analytics, setAnalytics] = useState<FeedbackAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
@@ -17,6 +65,7 @@ const FeedbackManagement = () => {
 
   useEffect(() => {
     fetchFeedbacks();
+    fetchAnalytics();
   }, [filters]);
 
   const fetchFeedbacks = async () => {
@@ -42,6 +91,23 @@ const FeedbackManagement = () => {
       setError('An error occurred while fetching feedbacks');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const analyticsResponse = await fetch(`${API_BASE_URL}/feedback/analytics/overview`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (analyticsResponse.ok) {
+        const data = await analyticsResponse.json();
+        setAnalytics(data);
+      }
+    } catch (err) {
+      console.error('Error fetching analytics:', err);
     }
   };
 
@@ -71,7 +137,7 @@ const FeedbackManagement = () => {
     if (!selectedFeedback) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/feedback/${selectedFeedback._id}/respond`, {
+      const responseData = await fetch(`${API_BASE_URL}/feedback/${selectedFeedback._id}/respond`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -80,7 +146,7 @@ const FeedbackManagement = () => {
         body: JSON.stringify({ response }),
       });
 
-      if (response.ok) {
+      if (responseData.ok) {
         setIsModalOpen(false);
         setSelectedFeedback(null);
         setResponse('');
@@ -91,6 +157,38 @@ const FeedbackManagement = () => {
     } catch (err) {
       setError('An error occurred while sending response');
     }
+  };
+
+  const prepareChartData = () => {
+    if (!analytics) return [];
+
+    const typeData = analytics.overall.reduce((acc: any[], curr) => {
+      const existing = acc.find(item => item.type === curr._id.type);
+      if (existing) {
+        existing.count += curr.count;
+      } else {
+        acc.push({ type: curr._id.type, count: curr.count });
+      }
+      return acc;
+    }, []);
+
+    return typeData;
+  };
+
+  const prepareSentimentData = () => {
+    if (!analytics) return [];
+
+    const sentimentData = analytics.overall.reduce((acc: any[], curr) => {
+      const existing = acc.find(item => item.sentiment === curr._id.sentiment);
+      if (existing) {
+        existing.count += curr.count;
+      } else {
+        acc.push({ sentiment: curr._id.sentiment, count: curr.count });
+      }
+      return acc;
+    }, []);
+
+    return sentimentData;
   };
 
   if (loading) {
@@ -112,8 +210,54 @@ const FeedbackManagement = () => {
         </div>
       </div>
 
+      {/* Analytics Section */}
+      {analytics && (
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-lg font-medium mb-4">Feedback by Type</h2>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={prepareChartData()}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="type" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="count" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-lg font-medium mb-4">Feedback by Sentiment</h2>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={prepareSentimentData()}
+                    dataKey="count"
+                    nameKey="sentiment"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    label
+                  >
+                    {prepareSentimentData().map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
@@ -188,7 +332,7 @@ const FeedbackManagement = () => {
                   {feedbacks.map((feedback) => (
                     <tr key={feedback._id}>
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                        {feedback.user.name}
+                        {feedback.userId ? `${feedback.userId.firstName} ${feedback.userId.lastName}` : 'Anonymous'}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         <span

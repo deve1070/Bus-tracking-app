@@ -6,7 +6,6 @@ import UserManagement from './users/UserManagement';
 import StationManagement from './stations/StationManagement';
 import Analytics from './analytics/Analytics';
 import MessagingNotifications from './notifications/MessagingNotifications';
-import FeedbackManagement from './feedback/FeedbackManagement';
 
 const MainAdmin: React.FC = () => {
   return (
@@ -17,7 +16,6 @@ const MainAdmin: React.FC = () => {
       <Route path="/stations" element={<StationManagement />} />
       <Route path="/analytics" element={<Analytics />} />
       <Route path="/notifications" element={<MessagingNotifications />} />
-      <Route path="/feedback" element={<FeedbackManagement />} />
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>
   );

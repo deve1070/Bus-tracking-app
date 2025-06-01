@@ -7,6 +7,8 @@ export interface IFeedback extends Document {
   category: string;
   message: string;
   sentiment?: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
+  status: 'PENDING' | 'IN_PROGRESS' | 'RESOLVED';
+  response?: string;
   relatedBusId?: mongoose.Types.ObjectId;
   relatedStationId?: mongoose.Types.ObjectId;
 }
@@ -38,6 +40,14 @@ const feedbackSchema = new Schema<IFeedback>({
   sentiment: {
     type: String,
     enum: ['POSITIVE', 'NEUTRAL', 'NEGATIVE']
+  },
+  status: {
+    type: String,
+    enum: ['PENDING', 'IN_PROGRESS', 'RESOLVED'],
+    default: 'PENDING'
+  },
+  response: {
+    type: String
   },
   relatedBusId: {
     type: Schema.Types.ObjectId,
