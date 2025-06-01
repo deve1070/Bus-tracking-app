@@ -44,7 +44,7 @@ interface BusLocation {
 
 const RealTimeMapVisualization: React.FC = () => {
   const [busLocations, setBusLocations] = useState<Record<string, BusLocation>>({});
-  const [center, setCenter] = useState<[number, number]>([0, 0]);
+  const [center, setCenter] = useState<[number, number]>([9.03, 38.74]); // Default to Addis Ababa
   const [selectedBus, setSelectedBus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,10 +53,21 @@ const RealTimeMapVisualization: React.FC = () => {
 
     // Listen for GPS updates
     socket.on('gps-update', (data: BusLocation) => {
+      console.log('Received GPS update:', data);
       setBusLocations(prev => ({
         ...prev,
         [data.deviceId]: data
       }));
+    });
+
+    // Listen for bus location updates
+    socket.on('busLocationUpdate', (data: BusLocation[]) => {
+      console.log('Received bus location update:', data);
+      const locations: Record<string, BusLocation> = {};
+      data.forEach(bus => {
+        locations[bus.deviceId] = bus;
+      });
+      setBusLocations(locations);
     });
 
     // Get initial bus locations

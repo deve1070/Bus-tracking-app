@@ -1,35 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bus, Clock, MapPin, RefreshCw, Filter } from 'lucide-react';
 import RealTimeMapVisualization from '../../station-admin/monitoring/components/RealTimeMapVisualization';
+import io from 'socket.io-client';
 
-// Sample bus data
-const busData = [
-  { id: 'BUS-001', position: { lat: 9.0227, lng: 38.7468 }, route: 'Downtown - Airport', status: 'active', speed: 35, passengers: 32, lastUpdated: '1 min ago' },
-  { id: 'BUS-002', position: { lat: 9.0300, lng: 38.7550 }, route: 'Westside Loop', status: 'active', speed: 28, passengers: 25, lastUpdated: '2 mins ago' },
-  { id: 'BUS-003', position: { lat: 9.0150, lng: 38.7400 }, route: 'East Express', status: 'active', speed: 42, passengers: 18, lastUpdated: '1 min ago' },
-  { id: 'BUS-004', position: { lat: 9.0350, lng: 38.7300 }, route: 'North Route', status: 'maintenance', speed: 0, passengers: 0, lastUpdated: '30 mins ago' },
-  { id: 'BUS-005', position: { lat: 9.0100, lng: 38.7600 }, route: 'South Beach', status: 'active', speed: 30, passengers: 22, lastUpdated: '3 mins ago' },
-];
-
-// Sample station data
-const stationData = [
-  { id: 'ST-001', name: 'Central Station', position: { lat: 9.0227, lng: 38.7468 } },
-  { id: 'ST-002', name: 'North Terminal', position: { lat: 9.0350, lng: 38.7500 } },
-  { id: 'ST-003', name: 'East Hub', position: { lat: 9.0250, lng: 38.7650 } },
-  { id: 'ST-004', name: 'West Station', position: { lat: 9.0200, lng: 38.7300 } },
-  { id: 'ST-005', name: 'South Terminal', position: { lat: 9.0100, lng: 38.7450 } },
-];
-
-// Mock Google Maps API - replace with actual API key in a production environment
-const googleMapsApiKey = "YOUR_API_KEY_HERE";
+interface BusData {
+  deviceId: string;
+  busNumber: string;
+  routeNumber: string;
+  location: {
+    lat: number;
+    lng: number;
+  };
+  speed: number;
+  heading: number;
+  status: string;
+  lastUpdate: string;
+}
 
 const RealTimeMonitoring: React.FC = () => {
   const [showStations, setShowStations] = useState(true);
   const [filteredRoutes, setFilteredRoutes] = useState<string[]>([]);
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
+  const [busData, setBusData] = useState<Record<string, BusData>>({});
+  const [activeBuses, setActiveBuses] = useState(0);
+  const [maintenanceBuses, setMaintenanceBuses] = useState(0);
+  const [outOfServiceBuses, setOutOfServiceBuses] = useState(0);
+
+  useEffect(() => {
+    // Connect to WebSocket server
+    const socket = io(import.meta.env.VITE_REACT_APP_WS_URL || 'http://localhost:3000');
+
+    // Listen for bus location updates
+    socket.on('busLocationUpdate', (data: BusData[]) => {
+      const newBusData: Record<string, BusData> = {};
+      data.forEach(bus => {
+        newBusData[bus.deviceId] = bus;
+      });
+      setBusData(newBusData);
+      setLastRefreshed(new Date());
+
+      // Update bus statistics
+      const active = data.filter(bus => bus.status === 'active').length;
+      const maintenance = data.filter(bus => bus.status === 'maintenance').length;
+      const outOfService = data.filter(bus => bus.status === 'inactive').length;
+
+      setActiveBuses(active);
+      setMaintenanceBuses(maintenance);
+      setOutOfServiceBuses(outOfService);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const refreshData = () => {
-    // In a real app, this would fetch new data from the API
     setLastRefreshed(new Date());
   };
 
@@ -107,19 +132,19 @@ const RealTimeMonitoring: React.FC = () => {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Buses:</span>
-                <span className="font-medium">48</span>
+                <span className="font-medium">{Object.keys(busData).length}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Active:</span>
-                <span className="font-medium text-green-600">42</span>
+                <span className="font-medium text-green-600">{activeBuses}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Maintenance:</span>
-                <span className="font-medium text-amber-600">5</span>
+                <span className="font-medium text-amber-600">{maintenanceBuses}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Out of Service:</span>
-                <span className="font-medium text-red-600">1</span>
+                <span className="font-medium text-red-600">{outOfServiceBuses}</span>
               </div>
               <div className="border-t border-gray-200 my-2 pt-2">
                 <div className="flex justify-between">
@@ -163,27 +188,26 @@ const RealTimeMonitoring: React.FC = () => {
                   Speed
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Passengers
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Last Updated
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {busData.map((bus) => (
-                <tr key={bus.id} className="hover:bg-gray-50">
+              {Object.values(busData).map((bus) => (
+                <tr key={bus.deviceId} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-700">
-                    {bus.id}
+                    {bus.busNumber}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {bus.route}
+                    {bus.routeNumber}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       bus.status === 'active' 
                         ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
+                        : bus.status === 'maintenance'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-red-100 text-red-800'
                     }`}>
                       {bus.status}
                     </span>
@@ -192,10 +216,7 @@ const RealTimeMonitoring: React.FC = () => {
                     {bus.speed} km/h
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {bus.passengers}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {bus.lastUpdated}
+                    {new Date(bus.lastUpdate).toLocaleTimeString()}
                   </td>
                 </tr>
               ))}

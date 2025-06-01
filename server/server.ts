@@ -1,50 +1,37 @@
-import http from 'http';
-import app from './app';
+import { app, io, httpServer } from './app';
 
-const server = http.createServer(app);
-
-// Start server
-const PORT = 3000; // Force using port 3000
-const MAX_PORT_RETRIES = 10;
+// Force port 3000
+const PORT = 3000;
+console.log('Starting server on port:', PORT);
 
 const startServer = async () => {
-  const tryPort = async (port: number, retries: number = 0): Promise<void> => {
-    if (retries >= MAX_PORT_RETRIES) {
-      throw new Error(`Could not find an available port after ${MAX_PORT_RETRIES} attempts`);
-    }
+  return new Promise((resolve, reject) => {
+    // Kill any process using port 3000
+    const { exec } = require('child_process');
+    exec(`lsof -ti:${PORT} | xargs kill -9 2>/dev/null`, () => {
+      // Start the server
+      httpServer.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server is running on port ${PORT}`);
+        console.log('Server is accessible at:');
+        console.log(`- http://localhost:${PORT}`);
+        console.log(`- http://10.42.0.158:${PORT}`);
+        resolve(true);
+      });
 
-    return new Promise((resolve, reject) => {
-      server.once('error', (err: NodeJS.ErrnoException) => {
+      httpServer.once('error', (err: NodeJS.ErrnoException) => {
         if (err.code === 'EADDRINUSE') {
-          console.log(`Port ${port} is busy, trying ${port + 1}`);
-          resolve(tryPort(port + 1, retries + 1));
+          console.error(`Port ${PORT} is already in use. Please free up the port and try again.`);
+          process.exit(1);
         } else {
+          console.error('Error starting server:', err);
           reject(err);
         }
       });
-
-      server.listen(port, () => {
-        console.log(`Server is running on port ${port}`);
-        resolve();
-      });
     });
-  };
-
-  try {
-    await tryPort(PORT);
-  } catch (error) {
-    console.error('Error starting server:', error);
-    process.exit(1);
-  }
+  });
 };
 
 // Handle server errors
-server.on('error', (error: Error) => {
-  console.error('Server error:', error);
-  process.exit(1);
-});
-
-// Handle uncaught exceptions
 process.on('uncaughtException', (error: Error) => {
   console.error('Uncaught Exception:', error);
   process.exit(1);
@@ -59,7 +46,7 @@ process.on('unhandledRejection', (reason: any) => {
 // Handle process termination
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Closing server...');
-  server.close(() => {
+  httpServer.close(() => {
     console.log('Server closed');
     process.exit(0);
   });
@@ -67,10 +54,13 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('SIGINT received. Closing server...');
-  server.close(() => {
+  httpServer.close(() => {
     console.log('Server closed');
     process.exit(0);
   });
 });
 
-startServer();
+startServer().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
+});

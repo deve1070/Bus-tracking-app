@@ -1,5 +1,5 @@
-import { Bus } from '../models';
-import { io } from '../server';
+import { Bus, Station } from '../models';
+import { io } from '../app';
 import { OSRMService } from './osrmService';
 
 interface GPSData {
@@ -101,7 +101,7 @@ export class GPSService {
         type: 'Point',
         coordinates: [data.longitude, data.latitude]
       };
-      bus.status = data.speed > 0 ? 'active' : 'inactive';
+      bus.status = data.speed > 0 ? 'ACTIVE' : 'INACTIVE';
       bus.lastUpdateTime = new Date();
 
       // Update tracking data
@@ -114,25 +114,37 @@ export class GPSService {
       await bus.save();
 
       // Emit location update through socket.io
-      io.emit('busLocationUpdate', {
-        busId: bus._id,
-        location: bus.currentLocation,
+      io.emit('gps-update', {
+        deviceId: bus.deviceId,
+        busNumber: bus.busNumber,
+        routeNumber: bus.routeNumber,
+        location: {
+          lat: bus.currentLocation.coordinates[1],
+          lng: bus.currentLocation.coordinates[0]
+        },
+        speed: bus.trackingData?.speed || 0,
+        heading: bus.trackingData?.heading || 0,
         status: bus.status,
-        trackingData: bus.trackingData
+        lastUpdate: bus.lastUpdateTime,
+        currentStation: bus.currentStationId,
+        nextStation: bus.route?.stations[0] || null,
+        eta: bus.route?.estimatedTime || null,
+        distanceToNext: null // Will be calculated when needed
       });
 
       // If bus is near any stations, emit arrival notification
-      if (bus.route.stations && bus.route.stations.length > 0) {
+      if (bus.route?.stations && bus.route.stations.length > 0) {
         const nextStation = await this.findNextStation(bus);
         if (nextStation) {
           const distance = await OSRMService.calculateDistance(
-            [data.longitude, data.latitude],
-            [nextStation.location.coordinates[0], nextStation.location.coordinates[1]]
+            { lat: data.latitude, lng: data.longitude },
+            { lat: nextStation.location.coordinates[1], lng: nextStation.location.coordinates[0] }
           );
 
           if (distance <= 500) { // 500 meters threshold
-            io.emit('busArrival', {
+            io.emit('station-arrival', {
               busId: bus._id,
+              busNumber: bus.busNumber,
               stationId: nextStation._id,
               stationName: nextStation.name,
               estimatedArrival: new Date(Date.now() + (distance / data.speed) * 1000)
@@ -149,7 +161,7 @@ export class GPSService {
   }
 
   private static async findNextStation(bus: any) {
-    if (!bus.route.stations || bus.route.stations.length === 0) {
+    if (!bus.route?.stations || bus.route.stations.length === 0) {
       return null;
     }
 
@@ -161,8 +173,8 @@ export class GPSService {
       const station = await Station.findById(stationId);
       if (station) {
         const distance = await OSRMService.calculateDistance(
-          currentLocation,
-          station.location.coordinates
+          { lat: currentLocation[1], lng: currentLocation[0] },
+          { lat: station.location.coordinates[1], lng: station.location.coordinates[0] }
         );
 
         if (distance < minDistance) {

@@ -1,15 +1,6 @@
 import React, { useState, useEffect } from 'react';
-
-interface Feedback {
-  id: string;
-  userId: string;
-  userName: string;
-  type: 'complaint' | 'suggestion' | 'praise';
-  message: string;
-  status: 'pending' | 'in_progress' | 'resolved';
-  createdAt: string;
-  response?: string;
-}
+import { Feedback } from '../../../types';
+import { API_BASE_URL } from '../../../config';
 
 const FeedbackManagement = () => {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
@@ -18,15 +9,29 @@ const FeedbackManagement = () => {
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
   const [response, setResponse] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    type: '',
+    status: '',
+    sentiment: ''
+  });
 
   useEffect(() => {
     fetchFeedbacks();
-  }, []);
+  }, [filters]);
 
   const fetchFeedbacks = async () => {
     try {
-      // TODO: Implement API call to backend
-      const response = await fetch('/api/feedback');
+      const queryParams = new URLSearchParams();
+      if (filters.type) queryParams.append('type', filters.type);
+      if (filters.status) queryParams.append('status', filters.status);
+      if (filters.sentiment) queryParams.append('sentiment', filters.sentiment);
+
+      const response = await fetch(`${API_BASE_URL}/feedback?${queryParams.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
       if (response.ok) {
         const data = await response.json();
         setFeedbacks(data);
@@ -42,10 +47,11 @@ const FeedbackManagement = () => {
 
   const handleStatusChange = async (feedbackId: string, newStatus: Feedback['status']) => {
     try {
-      const response = await fetch(`/api/feedback/${feedbackId}/status`, {
+      const response = await fetch(`${API_BASE_URL}/feedback/${feedbackId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({ status: newStatus }),
       });
@@ -65,10 +71,11 @@ const FeedbackManagement = () => {
     if (!selectedFeedback) return;
 
     try {
-      const response = await fetch(`/api/feedback/${selectedFeedback.id}/respond`, {
+      const response = await fetch(`${API_BASE_URL}/feedback/${selectedFeedback._id}/respond`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({ response }),
       });
@@ -105,6 +112,42 @@ const FeedbackManagement = () => {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <select
+          value={filters.type}
+          onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        >
+          <option value="">All Types</option>
+          <option value="COMPLAINT">Complaints</option>
+          <option value="SUGGESTION">Suggestions</option>
+          <option value="PRAISE">Praise</option>
+        </select>
+
+        <select
+          value={filters.status}
+          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        >
+          <option value="">All Statuses</option>
+          <option value="PENDING">Pending</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="RESOLVED">Resolved</option>
+        </select>
+
+        <select
+          value={filters.sentiment}
+          onChange={(e) => setFilters({ ...filters, sentiment: e.target.value })}
+          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        >
+          <option value="">All Sentiments</option>
+          <option value="POSITIVE">Positive</option>
+          <option value="NEUTRAL">Neutral</option>
+          <option value="NEGATIVE">Negative</option>
+        </select>
+      </div>
+
       {error && (
         <div className="mt-4 rounded-md bg-red-50 p-4">
           <div className="text-sm text-red-700">{error}</div>
@@ -131,6 +174,9 @@ const FeedbackManagement = () => {
                       Status
                     </th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Sentiment
+                    </th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                       Date
                     </th>
                     <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
@@ -140,16 +186,16 @@ const FeedbackManagement = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {feedbacks.map((feedback) => (
-                    <tr key={feedback.id}>
+                    <tr key={feedback._id}>
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                        {feedback.userName}
+                        {feedback.user.name}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            feedback.type === 'complaint'
+                            feedback.type === 'COMPLAINT'
                               ? 'bg-red-100 text-red-800'
-                              : feedback.type === 'suggestion'
+                              : feedback.type === 'SUGGESTION'
                               ? 'bg-blue-100 text-blue-800'
                               : 'bg-green-100 text-green-800'
                           }`}
@@ -163,19 +209,32 @@ const FeedbackManagement = () => {
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         <select
                           value={feedback.status}
-                          onChange={(e) => handleStatusChange(feedback.id, e.target.value as Feedback['status'])}
+                          onChange={(e) => handleStatusChange(feedback._id, e.target.value as Feedback['status'])}
                           className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            feedback.status === 'resolved'
+                            feedback.status === 'RESOLVED'
                               ? 'bg-green-100 text-green-800'
-                              : feedback.status === 'in_progress'
+                              : feedback.status === 'IN_PROGRESS'
                               ? 'bg-yellow-100 text-yellow-800'
                               : 'bg-gray-100 text-gray-800'
                           }`}
                         >
-                          <option value="pending">Pending</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="resolved">Resolved</option>
+                          <option value="PENDING">Pending</option>
+                          <option value="IN_PROGRESS">In Progress</option>
+                          <option value="RESOLVED">Resolved</option>
                         </select>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            feedback.sentiment === 'POSITIVE'
+                              ? 'bg-green-100 text-green-800'
+                              : feedback.sentiment === 'NEGATIVE'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {feedback.sentiment}
+                        </span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         {new Date(feedback.createdAt).toLocaleDateString()}

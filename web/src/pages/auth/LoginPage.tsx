@@ -4,8 +4,7 @@ import axios from 'axios';
 import { UserRole, LoginResponse } from '../../types/auth';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { Bus } from 'lucide-react';
-
-const API_URL = 'http://localhost:5000/api';
+import { API_BASE_URL } from '../../config/api';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -23,7 +22,7 @@ const LoginPage: React.FC = () => {
     try {
       console.log('Attempting login with:', { email });
       
-      const response = await axios.post<LoginResponse>(`${API_URL}/auth/login`, { 
+      const response = await axios.post<LoginResponse>(`${API_BASE_URL}/auth/login`, { 
         email, 
         password 
       });

@@ -10,6 +10,7 @@ import {
   BarChart,
   MonitorCheck,
   CreditCard,
+  MessageSquare,
 } from 'lucide-react';
 import AdminLayout from '../../../components/layout/AdminLayout';
 
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Payments', href: '/admin/payments', icon: CreditCard },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart },
   { name: 'Monitoring', href: '/admin/monitoring', icon: MonitorCheck },
+  { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
   { name: 'Notifications', href: '/admin/notifications', icon: Bell },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { User } from '../models';
-import { UserRole } from '../models/User';
+import { UserRole, IUser } from '../models/User';
 
 interface AuthRequest extends Request {
   user?: any;
@@ -64,9 +64,9 @@ export const createUser = async (req: AuthRequest, res: Response) => {
 
     // Remove password from response
     const userResponse = user.toObject();
-    delete userResponse.password;
+    const { password: _, ...userWithoutPassword } = userResponse;
 
-    res.status(201).json(userResponse);
+    res.status(201).json(userWithoutPassword);
   } catch (error) {
     console.error('Error creating user:', error);
     res.status(500).json({ error: 'Failed to create user' });
@@ -103,9 +103,9 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
 
     // Remove password from response
     const userResponse = user.toObject();
-    delete userResponse.password;
+    const { password: _, ...userWithoutPassword } = userResponse;
 
-    res.json(userResponse);
+    res.json(userWithoutPassword);
   } catch (error) {
     console.error('Error updating user:', error);
     res.status(500).json({ error: 'Failed to update user' });
