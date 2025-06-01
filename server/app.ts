@@ -155,7 +155,16 @@ app.set('io', io);
 
 // Middleware
 app.use(cors({
-  origin: '*',  // Allow all origins
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -167,7 +176,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   if (req.body && Object.keys(req.body).length > 0) {
-    console.log('Request body:', { ...req.body, password: '[REDACTED]' });
+    // Create a copy of the body without sensitive data
+    const sanitizedBody = { ...req.body };
+    if (sanitizedBody.password) delete sanitizedBody.password;
+    if (sanitizedBody.newPassword) delete sanitizedBody.newPassword;
+    console.log('Request body:', sanitizedBody);
   }
   next();
 });

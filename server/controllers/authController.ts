@@ -169,4 +169,15 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     res.status(400).json({ error: 'Failed to fetch profile' });
   }
+};
+
+export const logout = async (req: Request, res: Response) => {
+  try {
+    // In a real application, you might want to invalidate the token
+    // For now, we'll just return a success response
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Logout failed' });
+  }
 }; 

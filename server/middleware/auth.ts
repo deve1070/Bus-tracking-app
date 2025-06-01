@@ -6,8 +6,23 @@ export interface AuthRequest extends Request {
     user?: any;
 }
 
+// List of public routes that don't require authentication
+const publicRoutes = [
+    '/login',
+    '/send-reset-code',
+    '/verify-reset-code',
+    '/reset-password'
+];
+
 export const auth = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
+        // Skip authentication for public routes
+        const isPublicRoute = publicRoutes.some(route => req.path.endsWith(route));
+        if (isPublicRoute) {
+            console.log('Skipping auth for public route:', req.path);
+            return next();
+        }
+
         const token = req.header('Authorization')?.replace('Bearer ', '');
 
         if (!token) {

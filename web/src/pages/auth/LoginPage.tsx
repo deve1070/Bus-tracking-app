@@ -149,9 +149,12 @@ const LoginPage: React.FC = () => {
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-blue-700 hover:text-blue-600">
+              <button
+                onClick={() => navigate('/reset-password')}
+                className="font-medium text-blue-700 hover:text-blue-600"
+              >
                 Forgot your password?
-              </a>
+              </button>
             </div>
           </div>
 

@@ -3,12 +3,14 @@ import {
   register,
   login,
   getProfile,
-  changePassword
+  changePassword,
+  logout
 } from '../controllers/authController';
 import { auth } from '../middleware/auth';
 import { checkRole } from '../middleware/auth';
 import { UserRole, User } from '../models';
 import jwt from 'jsonwebtoken';
+import { sendResetCode, verifyResetCode, resetPassword } from '../controllers/passwordResetController';
 
 // Define AuthRequest interface
 interface AuthRequest extends Request {
@@ -26,15 +28,65 @@ const generateToken = (user: any) => {
 
 const router = express.Router();
 
-// Check if this is the first user registration
-const isFirstUser = async () => {
-  const count = await User.countDocuments();
-  console.log('Current user count:', count);
-  return count === 0;
+// Public routes (no auth required)
+router.post('/login', login as RequestHandler);
+
+// Password reset routes (public)
+const sendResetCodeHandler: RequestHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      res.status(400).json({ message: 'Email is required' });
+      return;
+    }
+    await sendResetCode(req, res);
+  } catch (error) {
+    console.error('Error in send-reset-code route:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 };
 
-// Public routes
-router.post('/register', auth, checkRole([UserRole.MAIN_ADMIN]), async (req: AuthRequest, res: Response) => {
+const verifyResetCodeHandler: RequestHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      res.status(400).json({ message: 'Email and code are required' });
+      return;
+    }
+    await verifyResetCode(req, res);
+  } catch (error) {
+    console.error('Error in verify-reset-code route:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+const resetPasswordHandler: RequestHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) {
+      res.status(400).json({ message: 'Email, code, and new password are required' });
+      return;
+    }
+    await resetPassword(req, res);
+  } catch (error) {
+    console.error('Error in reset-password route:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+router.post('/send-reset-code', sendResetCodeHandler);
+router.post('/verify-reset-code', verifyResetCodeHandler);
+router.post('/reset-password', resetPasswordHandler);
+
+// Protected routes (require auth)
+router.use(auth);
+
+router.get('/profile', getProfile as RequestHandler);
+router.post('/change-password', changePassword as RequestHandler);
+router.post('/logout', logout as RequestHandler);
+
+// Registration route (protected)
+router.post('/register', checkRole([UserRole.MAIN_ADMIN]), async (req: AuthRequest, res: Response) => {
   try {
     const { email, password, firstName, lastName, role, phoneNumber, username } = req.body;
     const user = new User({
@@ -52,13 +104,5 @@ router.post('/register', auth, checkRole([UserRole.MAIN_ADMIN]), async (req: Aut
     res.status(400).json({ error: 'Failed to register user' });
   }
 });
-
-// Login route (public)
-router.post('/login', login as RequestHandler);
-
-// Protected routes
-router.use(auth);
-router.get('/profile', getProfile as RequestHandler);
-router.post('/change-password', changePassword as RequestHandler);
 
 export default router; 

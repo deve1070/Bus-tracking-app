@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import MainAdminLayout from '../pages/main-admin/layout/Layout';
 import StationAdminLayout from '../pages/station-admin/layout/Layout';
 import LoginPage from '../pages/auth/LoginPage';
+import PasswordReset from '../pages/auth/PasswordReset';
 
 // Main Admin Pages
 import Dashboard from '../pages/main-admin/dashboard/Dashboard';
@@ -39,6 +40,7 @@ const AppRoutes = () => {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<PasswordReset />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
