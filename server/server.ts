@@ -1,8 +1,15 @@
+import 'dotenv/config';
 import { app, io, httpServer } from './app';
 
 // Force port 3000
 const PORT = 3000;
 console.log('Starting server on port:', PORT);
+
+// Log environment variables for debugging
+console.log('Email configuration:', {
+  user: process.env.EMAIL_USER,
+  password: process.env.EMAIL_PASSWORD ? '****' : 'not set'
+});
 
 const startServer = async () => {
   return new Promise((resolve, reject) => {

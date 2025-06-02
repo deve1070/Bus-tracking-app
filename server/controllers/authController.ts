@@ -85,8 +85,17 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    console.log('Found user:', {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      hasPassword: !!user.password
+    });
+
     // Check password
     const isMatch = await user.comparePassword(password);
+    console.log('Password comparison result:', isMatch);
+
     if (!isMatch) {
       console.log('Invalid password for email:', email);
       return res.status(401).json({ error: 'Invalid credentials' });

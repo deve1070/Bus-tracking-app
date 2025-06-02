@@ -22,6 +22,8 @@ export interface IUser extends Document {
   deviceToken?: string;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  resetCode?: string;
+  resetCodeExpires?: Date;
   lastLogin?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -71,14 +73,14 @@ const userSchema = new Schema<IUser>({
   stationId: {
     type: Schema.Types.ObjectId,
     ref: 'Station',
-    required: function() {
+    required: function(this: IUser) {
       return this.role === UserRole.STATION_ADMIN;
     }
   },
   busId: {
     type: Schema.Types.ObjectId,
     ref: 'Bus',
-    required: function() {
+    required: function(this: IUser) {
       return this.role === UserRole.DRIVER;
     }
   },
@@ -94,6 +96,8 @@ const userSchema = new Schema<IUser>({
   },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  resetCode: String,
+  resetCodeExpires: Date,
   lastLogin: Date
 }, {
   timestamps: true
@@ -114,7 +118,24 @@ userSchema.pre('save', async function(next) {
 
 // Method to compare password
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  return bcrypt.compare(candidatePassword, this.password);
+  console.log('Comparing passwords:', {
+    hasStoredPassword: !!this.password,
+    candidatePasswordLength: candidatePassword.length,
+    storedPasswordLength: this.password.length
+  });
+  
+  try {
+    const isMatch = await bcrypt.compare(candidatePassword, this.password);
+    console.log('Password comparison details:', {
+      isMatch,
+      candidatePassword,
+      storedPasswordHash: this.password
+    });
+    return isMatch;
+  } catch (error) {
+    console.error('Error comparing passwords:', error);
+    return false;
+  }
 };
 
 // Only keep the resetPasswordToken index since it's not defined in the schema
