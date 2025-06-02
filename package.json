@@ -1,8 +1,14 @@
 {
   "dependencies": {
+    "@chakra-ui/react": "^3.19.1",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@types/axios": "^0.14.4",
+    "@types/react": "^19.1.6",
     "axios": "^1.9.0",
     "bcrypt": "^6.0.0",
     "firebase-admin": "^13.4.0",
+    "framer-motion": "^12.15.0",
     "mongoose": "^8.14.3",
     "uuid": "^11.1.0"
   }

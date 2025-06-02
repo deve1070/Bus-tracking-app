@@ -1,9 +1,10 @@
 import {Request, Response, NextFunction} from 'express';
 import jwt from 'jsonwebtoken';
-import { User, UserRole } from '../models';
+import { User, UserRole, IUser } from '../models';
+import { Types } from 'mongoose';
 
 export interface AuthRequest extends Request {
-    user?: any;
+    user?: IUser;
 }
 
 // List of public routes that don't require authentication
@@ -13,6 +14,29 @@ const publicRoutes = [
     '/verify-reset-code',
     '/reset-password'
 ];
+
+export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!token) {
+            return res.status(401).json({ message: 'No token provided' });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as { _id: string };
+        const user = await User.findById(decoded._id);
+
+        if (!user) {
+            return res.status(401).json({ message: 'User not found' });
+        }
+
+        req.user = user;
+        next();
+    } catch (error) {
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+};
 
 export const auth = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -41,6 +65,20 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction) 
     } catch (error) {
         res.status(401).json({ error: 'Please authenticate.' });
     }
+};
+
+export const authorize = (...roles: UserRole[]) => {
+    return (req: AuthRequest, res: Response, next: NextFunction) => {
+        if (!req.user) {
+            return res.status(401).json({ message: 'Please authenticate.' });
+        }
+
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({ message: 'Access denied.' });
+        }
+
+        next();
+    };
 };
 
 export const checkRole = (roles: UserRole[]) => {

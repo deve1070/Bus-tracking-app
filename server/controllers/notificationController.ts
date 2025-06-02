@@ -1,15 +1,37 @@
 import { Request, Response } from 'express';
 import { User, Bus } from '../models';
 import { FirebaseService } from '../services/firebaseService';
-import NotificationModel, { INotification } from '../models/Notification';
-import { AuthRequest } from '../types/express';
 import mongoose from 'mongoose';
+import admin from 'firebase-admin';
+import { Types } from 'mongoose';
+import { Notification, UserRole, IUser } from '../models';
 
 interface NotificationRequest extends Request {
   user?: {
     _id: string;
     deviceToken?: string;
   };
+}
+
+interface AuthRequest extends Request {
+  user?: IUser;
+}
+
+interface FirebaseNotification {
+  title: string;
+  body: string;
+}
+
+interface FirebaseData {
+  type: string;
+  notificationId: string;
+}
+
+interface FirebaseMessage {
+  notification: FirebaseNotification;
+  data: FirebaseData;
+  tokens?: string[];
+  token?: string;
 }
 
 export const sendNotification = async (req: NotificationRequest, res: Response) => {
@@ -26,14 +48,14 @@ export const sendNotification = async (req: NotificationRequest, res: Response) 
     }
 
     // Create notification record
-    const notification = new NotificationModel({
+    const notification = new Notification({
       title: 'New Notification',
       message,
       type,
       recipients: [new mongoose.Types.ObjectId(recipientId)],
       status: 'pending',
       read: false
-    }) as INotification;
+    });
 
     await notification.save();
 
@@ -73,14 +95,14 @@ export const sendBulkNotification = async (req: NotificationRequest, res: Respon
 
     for (const user of users) {
       // Create notification record
-      const notification = new NotificationModel({
+      const notification = new Notification({
         title: 'New Notification',
         message,
         type,
         recipients: [new mongoose.Types.ObjectId(user.id.toString())],
         status: 'pending',
         read: false
-      }) as INotification;
+      });
 
       await notification.save();
       notifications.push(notification);
@@ -108,19 +130,50 @@ export const sendBulkNotification = async (req: NotificationRequest, res: Respon
   }
 };
 
-export const getNotifications = async (req: Request, res: Response) => {
+export const getNotifications = async (req: AuthRequest, res: Response) => {
   try {
-    const notifications = await NotificationModel.find().sort({ createdAt: -1 });
-    res.json(notifications);
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    let query: any = {};
+
+    // If user is a driver, get notifications sent to them
+    if (user.role === UserRole.DRIVER) {
+      query = {
+        $or: [
+          { recipient: userId },
+          { recipient: 'all' }
+        ]
+      };
+    }
+    // If user is a station admin, get notifications they sent
+    else if (user.role === UserRole.STATION_ADMIN) {
+      query = { sender: userId };
+    }
+
+    const notifications = await Notification.find(query)
+      .sort({ createdAt: -1 })
+      .populate('sender', 'firstName lastName')
+      .populate('recipient', 'firstName lastName');
+
+    res.status(200).json(notifications);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch notifications' });
+    console.error('Error in getNotifications:', error);
+    res.status(500).json({ message: 'Error fetching notifications' });
   }
 };
 
 export const createNotification = async (req: Request, res: Response) => {
   try {
     const { title, message, type, recipients } = req.body;
-    const notification = new NotificationModel({
+    const notification = new Notification({
       title,
       message,
       type,
@@ -139,7 +192,7 @@ export const updateNotification = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { title, message, type, recipients, status } = req.body;
-    const notification = await NotificationModel.findByIdAndUpdate(
+    const notification = await Notification.findByIdAndUpdate(
       id,
       { 
         title, 
@@ -162,7 +215,7 @@ export const updateNotification = async (req: Request, res: Response) => {
 export const deleteNotification = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const notification = await NotificationModel.findByIdAndDelete(id);
+    const notification = await Notification.findByIdAndDelete(id);
     if (!notification) {
       return res.status(404).json({ error: 'Notification not found' });
     }
@@ -181,7 +234,7 @@ export const markAsRead = async (req: NotificationRequest, res: Response) => {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const notification = await NotificationModel.findOne({
+    const notification = await Notification.findOne({
       _id: notificationId,
       recipients: new mongoose.Types.ObjectId(userId)
     });
@@ -314,5 +367,168 @@ export const unsubscribeFromTopic = async (req: Request, res: Response) => {
     res.json({ message: 'Unsubscribed from topic successfully' });
   } catch (error) {
     res.status(400).json({ error: 'Failed to unsubscribe from topic' });
+  }
+};
+
+// Send notification to all users
+export const sendNotificationToAll = async (req: AuthRequest, res: Response) => {
+  try {
+    const { title, message } = req.body;
+    const senderId = req.user?._id;
+
+    if (!senderId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Check if sender is a station admin
+    const sender = await User.findById(senderId);
+    if (!sender || sender.role !== UserRole.STATION_ADMIN) {
+      return res.status(403).json({ message: 'Only station admins can send notifications' });
+    }
+
+    // Get all users with device tokens
+    const users = await User.find({ deviceToken: { $exists: true, $ne: null } });
+    
+    // Create notification in database
+    const notification = new Notification({
+      title,
+      message,
+      sender: senderId,
+      recipient: 'all',
+      type: 'broadcast'
+    });
+    await notification.save();
+
+    // Send to all users with device tokens
+    const tokens = users.map(user => user.deviceToken).filter((token): token is string => !!token);
+    
+    if (tokens.length > 0) {
+      for (const token of tokens) {
+        const singleMessage = {
+          token,
+          notification: {
+            title,
+            body: message
+          },
+          data: {
+            type: 'broadcast',
+            notificationId: notification._id?.toString?.() ?? ''
+          }
+        };
+        try {
+          await admin.messaging().send(singleMessage);
+        } catch (error) {
+          console.error('Error sending notification to token:', token, error);
+        }
+      }
+    }
+
+    res.status(200).json({ 
+      message: 'Notification sent successfully',
+      notification
+    });
+  } catch (error) {
+    console.error('Error in sendNotificationToAll:', error);
+    res.status(500).json({ message: 'Error sending notification' });
+  }
+};
+
+// Send notification to specific driver
+export const sendNotificationToDriver = async (req: AuthRequest, res: Response) => {
+  try {
+    const { driverId, title, message } = req.body;
+    const senderId = req.user?._id;
+
+    if (!senderId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Check if sender is a station admin
+    const sender = await User.findById(senderId);
+    if (!sender || sender.role !== UserRole.STATION_ADMIN) {
+      return res.status(403).json({ message: 'Only station admins can send notifications' });
+    }
+
+    // Verify the driver exists and belongs to the station
+    const driver = await User.findOne({
+      _id: driverId,
+      role: UserRole.DRIVER,
+      stationId: sender.stationId
+    });
+
+    if (!driver) {
+      return res.status(404).json({ message: 'Driver not found or not associated with your station' });
+    }
+
+    // Create notification in database
+    const notification = new Notification({
+      title,
+      message,
+      sender: senderId,
+      recipient: driverId,
+      type: 'driver'
+    });
+    await notification.save();
+
+    // Send to driver if they have a device token
+    if (driver.deviceToken) {
+      const singleMessage = {
+        token: driver.deviceToken,
+        notification: {
+          title,
+          body: message
+        },
+        data: {
+          type: 'driver',
+          notificationId: notification._id?.toString?.() ?? ''
+        }
+      };
+
+      try {
+        await admin.messaging().send(singleMessage);
+      } catch (error) {
+        console.error('Error sending notification to driver:', error);
+      }
+    }
+
+    res.status(200).json({ 
+      message: 'Notification sent successfully',
+      notification
+    });
+  } catch (error) {
+    console.error('Error in sendNotificationToDriver:', error);
+    res.status(500).json({ message: 'Error sending notification' });
+  }
+};
+
+// Mark notification as read
+export const markNotificationAsRead = async (req: AuthRequest, res: Response) => {
+  try {
+    const { notificationId } = req.params;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const notification = await Notification.findOne({
+      _id: notificationId,
+      $or: [
+        { recipient: userId },
+        { recipient: 'all' }
+      ]
+    });
+
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    notification.read = true;
+    await notification.save();
+
+    res.status(200).json({ message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Error in markNotificationAsRead:', error);
+    res.status(500).json({ message: 'Error marking notification as read' });
   }
 }; 
