@@ -91,6 +91,19 @@ const TabLayout = () => {
       />
       
       <Tabs.Screen 
+        name="simulator" 
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon 
+              focused={focused} 
+              iconName="navigate" 
+              title="Simulator" 
+            />
+          ),
+        }}
+      />
+      
+      <Tabs.Screen 
         name="feedback" 
         options={{
           tabBarIcon: ({ focused }) => (
