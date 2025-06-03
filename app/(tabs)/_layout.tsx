@@ -37,7 +37,7 @@ const TabIcon = ({
 const TabLayout = () => {
   return (
     <Tabs
-    initialRouteName='passenger'
+      initialRouteName='home'
       screenOptions={{
         tabBarShowLabel: false,
         headerShown: false,
@@ -78,19 +78,6 @@ const TabLayout = () => {
       />
       
       <Tabs.Screen 
-        name="passenger" 
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon 
-              focused={focused} 
-              iconName="people" 
-              title="Passengers" 
-            />
-          ),
-        }}
-      />
-      
-      <Tabs.Screen 
         name="buses" 
         options={{
           tabBarIcon: ({ focused }) => (
@@ -98,6 +85,19 @@ const TabLayout = () => {
               focused={focused} 
               iconName="bus" 
               title="Buses" 
+            />
+          ),
+        }}
+      />
+      
+      <Tabs.Screen 
+        name="feedback" 
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon 
+              focused={focused} 
+              iconName="chatbubble-ellipses" 
+              title="Feedback" 
             />
           ),
         }}

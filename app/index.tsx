@@ -5,7 +5,8 @@ export default function Index() {
   const router = useRouter();
 
   return (
-    <View className="flex">
+   <View className="flex-1 bg-black relative">
+
       {/* Background gradient overlay */}
       <View className="absolute inset-0 bg-black opacity-80" />
 
