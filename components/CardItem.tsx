@@ -8,6 +8,8 @@ type StatsCardProps = {
   size?: number;
   icon: "bus" | "users" | "dollar-sign" | "activity" | "right" | "clock";
   className?: string;
+  iconColor?: string;
+  subtitle?: React.ReactNode;
 };
 
 const Correct = Check;
@@ -19,7 +21,7 @@ const iconMap = {
   "right": Correct,
   "clock": Clock,
 };
-const StatsCard = ({ title, value, icon,size }: StatsCardProps) => {
+const StatsCard = ({ title, value, icon, size, iconColor, subtitle }: StatsCardProps) => {
  const theme = useColorScheme();
   const isDarkTheme = theme === 'dark';
   const Icon = iconMap[icon];
@@ -28,16 +30,17 @@ const StatsCard = ({ title, value, icon,size }: StatsCardProps) => {
   return (
     <View style={themedStyles.card}>
       <View style={themedStyles.contentContainer}>
-      <View style={themedStyles.iconContainer}>
-        <Icon
-        size={size ?? 24}
-        color={isDarkTheme ? "#3b82f6" : "#3b82f6"}
-        />
-      </View>
-      <View>
-        <Text style={themedStyles.title}>{title}</Text>
-        <Text style={[themedStyles.value, { fontSize: size ?? 24 }]}>{String(value)}</Text>
-      </View>
+        <View style={[themedStyles.iconContainer, iconColor && { backgroundColor: `${iconColor}20` }]}>
+          <Icon
+            size={size ?? 24}
+            color={iconColor ?? (isDarkTheme ? "#3b82f6" : "#3b82f6")}
+          />
+        </View>
+        <View style={themedStyles.textContainer}>
+          <Text style={themedStyles.title}>{title}</Text>
+          <Text style={[themedStyles.value, { fontSize: size ?? 24 }]}>{String(value)}</Text>
+          {subtitle}
+        </View>
       </View>
     </View>
   );
@@ -64,13 +67,16 @@ const styles = (isDarkTheme: boolean) => StyleSheet.create({
   },
   contentContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 16,
   },
   iconContainer: {
     backgroundColor: 'rgba(59, 130, 246, 0.2)', // bg-primary/20
     borderRadius: 12,
     padding: 12,
+  },
+  textContainer: {
+    flex: 1,
   },
   title: {
     fontSize: 14,
