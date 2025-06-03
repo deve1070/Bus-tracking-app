@@ -20,21 +20,39 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
 
+        console.log('Authenticating token:', {
+            hasAuthHeader: !!authHeader,
+            hasToken: !!token,
+            path: req.path
+        });
+
         if (!token) {
-            return res.status(401).json({ message: 'No token provided' });
+            console.log('No token provided');
+            res.status(401).json({ message: 'No token provided' });
+            return;
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as { _id: string };
-        const user = await User.findById(decoded._id);
+        console.log('Token decoded:', { userId: decoded._id });
+
+        const user = await User.findById(decoded._id).populate('stationId');
+        console.log('User found:', {
+            userId: user?._id,
+            role: user?.role,
+            stationId: user?.stationId
+        });
 
         if (!user) {
-            return res.status(401).json({ message: 'User not found' });
+            console.log('User not found');
+            res.status(401).json({ message: 'User not found' });
+            return;
         }
 
         req.user = user;
         next();
     } catch (error) {
-        return res.status(401).json({ message: 'Invalid token' });
+        console.error('Token verification failed:', error);
+        res.status(401).json({ message: 'Invalid token' });
     }
 };
 

@@ -1,6 +1,73 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import api from '../../../services/api';
+
+interface Bus {
+  _id: string;
+  busNumber: string;
+  routeNumber: string;
+  capacity: number;
+  deviceId: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
+  driverId?: string;
+  currentStationId?: string;
+  route: {
+    stations: string[];
+    estimatedTime: number;
+  };
+  schedule: {
+    departureTime: string;
+    arrivalTime: string;
+  };
+}
 
 const StationBuses: React.FC = () => {
+  const navigate = useNavigate();
+  const [buses, setBuses] = useState<Bus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchBuses();
+  }, []);
+
+  const fetchBuses = async () => {
+    try {
+      console.log('Fetching station buses...');
+      const response = await api.get('/buses/station');
+      console.log('Received response:', response.data);
+      setBuses(response.data);
+    } catch (error: any) {
+      console.error('Error fetching buses:', error);
+      const errorMessage = error.response?.data?.details || error.response?.data?.error || 'Failed to fetch buses';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdate = (busId: string) => {
+    navigate(`/station-admin/buses/update/${busId}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-600">
+        {error}
+      </div>
+    );
+  }
+
   return (
     <div className="py-6">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
@@ -8,8 +75,8 @@ const StationBuses: React.FC = () => {
         <div className="mt-6">
           <div className="bg-white shadow overflow-hidden sm:rounded-md">
             <ul className="divide-y divide-gray-200">
-              {[1, 2, 3].map((bus) => (
-                <li key={bus}>
+              {buses.map((bus) => (
+                <li key={bus._id}>
                   <div className="px-4 py-4 sm:px-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
@@ -21,16 +88,29 @@ const StationBuses: React.FC = () => {
                           </div>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-indigo-600">Bus #{bus}</div>
-                          <div className="text-sm text-gray-500">Route: City Center - Airport</div>
+                          <div className="text-sm font-medium text-indigo-600">Bus #{bus.busNumber}</div>
+                          <div className="text-sm text-gray-500">Route: {bus.routeNumber}</div>
+                          <div className="text-sm text-gray-500">
+                            Status: <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              bus.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                              bus.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {bus.status}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          On Time
-                        </span>
-                        <button className="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
-                          View Details
+                        <div className="text-sm text-gray-500">
+                          <div>Capacity: {bus.capacity}</div>
+                          <div>Device ID: {bus.deviceId}</div>
+                        </div>
+                        <button
+                          onClick={() => handleUpdate(bus._id)}
+                          className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                        >
+                          Update
                         </button>
                       </div>
                     </div>

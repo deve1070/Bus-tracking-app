@@ -12,6 +12,7 @@ const api = axios.create({
 // Add auth token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
+  console.log('Making request with token:', token ? 'Token present' : 'No token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -20,8 +21,22 @@ api.interceptors.request.use((config) => {
 
 // Handle token refresh and errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('Response received:', {
+      status: response.status,
+      url: response.config.url,
+      method: response.config.method
+    });
+    return response;
+  },
   async (error) => {
+    console.error('API Error:', {
+      status: error.response?.status,
+      url: error.config?.url,
+      method: error.config?.method,
+      data: error.response?.data
+    });
+
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -40,6 +55,7 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${token}`;
         return api(originalRequest);
       } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';

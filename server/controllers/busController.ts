@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Bus, Station } from '../models';
+import { Bus, Station, UserRole } from '../models';
 import { IStation } from '../models/Station';
 import mongoose, { Types } from 'mongoose';
 import { OSRMService } from '../services/osrmService';
@@ -78,20 +78,76 @@ export const createBus = async (req: AuthRequest, res: Response) => {
 export const updateBus = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    let updateData = req.body;
+    const userRole = req.user.role;
 
-    const bus = await Bus.findByIdAndUpdate(
+    console.log('Update bus request:', {
+      busId: id,
+      userRole,
+      stationId: req.user.stationId,
+      updateData
+    });
+
+    // For station admins, verify the bus belongs to their station
+    if (userRole === 'STATION_ADMIN') {
+      const stationId = req.user.stationId;
+      if (!stationId) {
+        console.log('Station admin has no station ID');
+        return res.status(403).json({ 
+          error: 'Station admin not associated with any station',
+          details: 'Please contact the main administrator to assign you to a station'
+        });
+      }
+
+      const bus = await Bus.findById(id).populate('route.stations');
+      console.log('Found bus:', {
+        busId: bus?._id,
+        hasRoute: !!bus?.route,
+        stations: bus?.route?.stations,
+        stationId
+      });
+      
+      if (!bus) {
+        console.log('Bus not found');
+        return res.status(404).json({ error: 'Bus not found' });
+      }
+
+      // Check if the bus is assigned to the station admin's station
+      if (!bus.route?.stations || !bus.route.stations.some(station => station._id.toString() === stationId.toString())) {
+        console.log('Bus not assigned to station admin\'s station');
+        return res.status(403).json({ 
+          error: 'Not authorized to update this bus',
+          details: 'This bus is not assigned to your station'
+        });
+      }
+
+      // For station admins, only allow updating certain fields
+      const allowedFields = ['status', 'schedule', 'route.estimatedTime'];
+      const filteredUpdateData = Object.keys(updateData).reduce((acc, key) => {
+        if (allowedFields.includes(key) || key.startsWith('schedule.') || key.startsWith('route.')) {
+          acc[key] = updateData[key];
+        }
+        return acc;
+      }, {} as any);
+
+      updateData = filteredUpdateData;
+    }
+
+    const updatedBus = await Bus.findByIdAndUpdate(
       id,
       updateData,
       { new: true, runValidators: true }
     );
 
-    if (!bus) {
+    if (!updatedBus) {
+      console.log('Bus not found after update attempt');
       return res.status(404).json({ error: 'Bus not found' });
     }
 
-    res.json(bus);
+    console.log('Bus updated successfully');
+    res.json(updatedBus);
   } catch (error) {
+    console.error('Error updating bus:', error);
     res.status(400).json({ error: 'Failed to update bus' });
   }
 };
@@ -382,5 +438,58 @@ export const getBusLocations = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Error getting bus locations:', error);
     res.status(500).json({ error: 'Failed to fetch bus locations' });
+  }
+};
+
+export const getStationBuses = async (req: AuthRequest, res: Response) => {
+  try {
+    console.log('Getting station buses for user:', {
+      userId: req.user?._id,
+      role: req.user?.role,
+      stationId: req.user?.stationId,
+      user: req.user
+    });
+
+    if (!req.user) {
+      console.log('No user found in request');
+      return res.status(401).json({ 
+        error: 'Authentication required',
+        details: 'No user found in request'
+      });
+    }
+
+    if (req.user.role !== UserRole.STATION_ADMIN) {
+      console.log('User is not a station admin:', req.user.role);
+      return res.status(403).json({ 
+        error: 'Access denied',
+        details: 'Only station admins can access this endpoint'
+      });
+    }
+
+    const stationId = req.user.stationId;
+    if (!stationId) {
+      console.log('No stationId found for user');
+      return res.status(403).json({ 
+        error: 'Not authorized to access station buses',
+        details: 'User is not associated with any station'
+      });
+    }
+
+    console.log('Finding buses for station:', stationId);
+    const buses = await Bus.find({
+      'route.stations': stationId
+    })
+    .populate('driverId', 'firstName lastName')
+    .populate('currentStationId', 'name')
+    .populate('route.stations', 'name location');
+
+    console.log('Found buses:', buses.length);
+    res.json(buses);
+  } catch (error) {
+    console.error('Error getting station buses:', error);
+    res.status(400).json({ 
+      error: 'Failed to fetch station buses',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }; 

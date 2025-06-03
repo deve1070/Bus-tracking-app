@@ -30,7 +30,7 @@ const seedBusesAndRoutes = async () => {
         routeNumber: 'R001',
         name: 'Downtown Express',
         description: 'Express service between Central Station and City Hall',
-        stations: [stations[0]._id, stations[1]._id],
+        stations: [stations[0]._id, stations[1]._id]],
         totalDistance: 5.2,
         estimatedDuration: 15,
         schedule: {
@@ -55,7 +55,41 @@ const seedBusesAndRoutes = async () => {
     ]);
     console.log('Added sample routes');
 
-    // Create sample buses
+    const addisAbabaRoutes = [
+      {
+        routeNumber: 'R001',
+        name: 'Merkato - Bole',
+        stations: [
+          { name: 'Merkato', coordinates: [38.7465, 9.0222] },
+          { name: 'Lideta', coordinates: [38.7489, 9.0234] },
+          { name: 'Mexico', coordinates: [38.7512, 9.0245] },
+          { name: 'Bole', coordinates: [38.7534, 9.0256] }
+        ],
+        estimatedTime: 30
+      },
+      {
+        routeNumber: 'R002',
+        name: 'Saris - CMC',
+        stations: [
+          { name: 'Saris', coordinates: [38.7556, 9.0267] },
+          { name: 'Summit', coordinates: [38.7578, 9.0278] },
+          { name: 'CMC', coordinates: [38.7600, 9.0289] }
+        ],
+        estimatedTime: 25
+      },
+      {
+        routeNumber: 'R003',
+        name: 'Ayat - Megenagna',
+        stations: [
+          { name: 'Ayat', coordinates: [38.7622, 9.0300] },
+          { name: 'Gerji', coordinates: [38.7644, 9.0311] },
+          { name: 'Megenagna', coordinates: [38.7666, 9.0322] }
+        ],
+        estimatedTime: 20
+      }
+    ];
+
+    // Create sample buses with Addis Ababa routes
     const buses = await Bus.create([
       {
         busNumber: 'BUS-001',
@@ -64,16 +98,16 @@ const seedBusesAndRoutes = async () => {
         deviceId: 'GPS-001',
         currentLocation: {
           type: 'Point',
-          coordinates: [38.7465, 9.0222]
+          coordinates: [38.7465, 9.0222] // Merkato coordinates
         },
         status: 'ACTIVE',
         route: {
           stations: [stations[0]._id, stations[1]._id],
-          estimatedTime: 15
+          estimatedTime: 30
         },
         schedule: {
           departureTime: '08:00',
-          arrivalTime: '08:15'
+          arrivalTime: '08:30'
         },
         lastUpdateTime: new Date(),
         isOnRoute: true,
@@ -91,16 +125,16 @@ const seedBusesAndRoutes = async () => {
         deviceId: 'GPS-002',
         currentLocation: {
           type: 'Point',
-          coordinates: [-74.006, 40.7128]
+          coordinates: [38.7556, 9.0267] // Saris coordinates
         },
         status: 'ACTIVE',
         route: {
           stations: stations.map(s => s._id),
-          estimatedTime: 45
+          estimatedTime: 25
         },
         schedule: {
           departureTime: '07:00',
-          arrivalTime: '07:45'
+          arrivalTime: '07:25'
         },
         lastUpdateTime: new Date(),
         isOnRoute: true,
@@ -122,7 +156,7 @@ const seedBusesAndRoutes = async () => {
         },
         status: 'MAINTENANCE',
         route: {
-          stations: [stations[0]._id, stations[1]._id],
+          stations: [stations[0]._id, stations[1]._id]],
           estimatedTime: 15
         },
         schedule: {

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Station, User, UserRole } from '../models';
+import { Station, User, UserRole, Bus } from '../models';
 
 interface AuthRequest extends Request {
   user?: any;
@@ -168,5 +168,53 @@ export const getStationByName = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Error in getStationByName:', error);
     res.status(400).json({ error: 'Failed to fetch station' });
+  }
+};
+
+export const getStationStats = async (req: AuthRequest, res: Response) => {
+  try {
+    const stationId = req.user?.stationId;
+    if (!stationId) {
+      return res.status(403).json({ 
+        error: 'Not authorized',
+        details: 'User is not associated with any station'
+      });
+    }
+
+    // Get total buses assigned to this station
+    const totalBuses = await Bus.countDocuments({
+      'route.stations': stationId
+    });
+
+    // Get active buses
+    const activeBuses = await Bus.countDocuments({
+      'route.stations': stationId,
+      status: 'ACTIVE'
+    });
+
+    // Get current passengers (this is a placeholder - implement actual passenger counting logic)
+    const currentPassengers = 0;
+    const totalPassengers = 0;
+
+    // Get next arrival (this is a placeholder - implement actual next arrival logic)
+    const nextArrival = '';
+
+    // Get number of alerts (this is a placeholder - implement actual alert counting logic)
+    const alerts = 0;
+
+    res.json({
+      totalBuses,
+      activeBuses,
+      totalPassengers,
+      currentPassengers,
+      nextArrival,
+      alerts
+    });
+  } catch (error) {
+    console.error('Error getting station stats:', error);
+    res.status(400).json({ 
+      error: 'Failed to fetch station statistics',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }; 

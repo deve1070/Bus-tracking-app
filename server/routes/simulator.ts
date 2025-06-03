@@ -1,12 +1,15 @@
 import express, { Request, Response, RequestHandler } from 'express';
 import { Bus } from '../models';
+import { authenticateToken } from '../middleware/auth';
+import { AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
 // Route for registering a simulated bus
-router.post('/register', (async (req: Request, res: Response) => {
+const registerBus = async (req: Request, res: Response) => {
   try {
-    const { busNumber, routeNumber, deviceId, status, route, schedule } = req.body;
+    const authReq = req as AuthRequest;
+    const { busNumber, routeNumber, deviceId, status, route, schedule } = authReq.body;
 
     // Create new bus
     const bus = new Bus({
@@ -40,12 +43,13 @@ router.post('/register', (async (req: Request, res: Response) => {
     console.error('Error registering simulated bus:', error);
     res.status(500).json({ error: 'Failed to register bus' });
   }
-}) as RequestHandler);
+};
 
 // Route for updating simulated bus location
-router.post('/update-location', (async (req: Request, res: Response) => {
+const updateBusLocation = async (req: Request, res: Response) => {
   try {
-    const { deviceId, location, speed, heading, status } = req.body;
+    const authReq = req as AuthRequest;
+    const { deviceId, location, speed, heading, status } = authReq.body;
 
     const bus = await Bus.findOneAndUpdate(
       { deviceId },
@@ -66,7 +70,8 @@ router.post('/update-location', (async (req: Request, res: Response) => {
     );
 
     if (!bus) {
-      return res.status(404).json({ error: 'Bus not found' });
+      res.status(404).json({ error: 'Bus not found' });
+      return;
     }
 
     res.json(bus);
@@ -74,6 +79,27 @@ router.post('/update-location', (async (req: Request, res: Response) => {
     console.error('Error updating bus location:', error);
     res.status(500).json({ error: 'Failed to update bus location' });
   }
-}) as RequestHandler);
+};
+
+// Route for verifying simulation code
+const verifyCode = async (req: Request, res: Response) => {
+  try {
+    const { code } = req.body;
+    const validCode = process.env.SIMULATION_CODE || '123456'; // Default code for testing
+
+    if (code === validCode) {
+      res.json({ success: true, message: 'Code verified successfully' });
+    } else {
+      res.status(401).json({ success: false, message: 'Invalid simulation code' });
+    }
+  } catch (error) {
+    console.error('Error verifying simulation code:', error);
+    res.status(500).json({ error: 'Failed to verify code' });
+  }
+};
+
+router.post('/register', authenticateToken, registerBus);
+router.post('/update-location', authenticateToken, updateBusLocation);
+router.post('/verify-code', verifyCode);
 
 export default router; 

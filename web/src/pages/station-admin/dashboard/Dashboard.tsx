@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bus, Users, Clock, AlertCircle, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../../services/api';
 
 interface StationStats {
   totalBuses: number;
@@ -29,10 +30,9 @@ const StationAdminDashboard: React.FC = () => {
 
   const fetchStationData = async () => {
     try {
-      const response = await fetch('/api/station/stats');
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
+      const response = await api.get('/station/stats');
+      if (response.data) {
+        setStats(response.data);
       }
     } catch (error) {
       console.error('Error fetching station data:', error);
