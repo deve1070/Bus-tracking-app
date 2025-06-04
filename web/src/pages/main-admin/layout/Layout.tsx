@@ -4,8 +4,6 @@ import {
   LayoutDashboard,
   Bus,
   Users,
-  Bell,
-  Settings,
   Map,
   BarChart,
   MonitorCheck,
@@ -23,8 +21,6 @@ const navigation = [
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart },
   { name: 'Monitoring', href: '/admin/monitoring', icon: MonitorCheck },
   { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
-  { name: 'Notifications', href: '/admin/notifications', icon: Bell },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
 const MainAdminLayout: React.FC = () => {

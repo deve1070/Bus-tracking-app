@@ -3,18 +3,16 @@ import { Outlet } from 'react-router-dom';
 import {
   LayoutDashboard,
   Bus,
-  Users2,
   Bell,
-  Settings,
+  Map,
 } from 'lucide-react';
 import AdminLayout from '../../../components/layout/AdminLayout';
 
 const navigation = [
   { name: 'Dashboard', href: '/station-admin', icon: LayoutDashboard },
   { name: 'Station Buses', href: '/station-admin/buses', icon: Bus },
-  { name: 'Passengers', href: '/station-admin/passengers', icon: Users2 },
+  { name: 'Monitoring', href: '/station-admin/monitoring', icon: Map },
   { name: 'Notifications', href: '/station-admin/notifications', icon: Bell },
-  { name: 'Settings', href: '/station-admin/settings', icon: Settings },
 ];
 
 const StationAdminLayoutWrapper: React.FC = () => {
