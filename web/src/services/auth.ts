@@ -14,6 +14,7 @@ export interface User {
   role: UserRole;
   username: string;
   phoneNumber: string;
+  stationId?: string; // Optional because not all users (like main admin) have a station
 }
 
 export interface LoginCredentials {
