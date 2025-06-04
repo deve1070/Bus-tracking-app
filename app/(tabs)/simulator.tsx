@@ -60,7 +60,7 @@ export default function Simulator() {
 
   const fetchBuses = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/bus/status`);
+      const response = await fetch(`${API_URL}/api/bus/list`);
       if (response.ok) {
         const data = await response.json();
         console.log('Fetched buses:', data);

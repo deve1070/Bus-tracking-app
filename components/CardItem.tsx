@@ -31,16 +31,16 @@ const StatsCard = ({ title, value, icon, size, iconColor, subtitle }: StatsCardP
     <View style={themedStyles.card}>
       <View style={themedStyles.contentContainer}>
         <View style={[themedStyles.iconContainer, iconColor && { backgroundColor: `${iconColor}20` }]}>
-          <Icon
-            size={size ?? 24}
+        <Icon
+        size={size ?? 24}
             color={iconColor ?? (isDarkTheme ? "#3b82f6" : "#3b82f6")}
-          />
-        </View>
+        />
+      </View>
         <View style={themedStyles.textContainer}>
-          <Text style={themedStyles.title}>{title}</Text>
-          <Text style={[themedStyles.value, { fontSize: size ?? 24 }]}>{String(value)}</Text>
+        <Text style={themedStyles.title}>{title}</Text>
+        <Text style={[themedStyles.value, { fontSize: size ?? 24 }]}>{String(value)}</Text>
           {subtitle}
-        </View>
+      </View>
       </View>
     </View>
   );

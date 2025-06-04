@@ -18,7 +18,7 @@ interface BusLocation {
   speed: number;
   heading: number;
   status: string;
-  lastUpdate: string;
+    lastUpdate: string;
   currentStation?: {
     name: string;
     location: {
@@ -175,14 +175,14 @@ export default function Location() {
 
         {/* Render custom bus markers */}
         {Object.values(busLocations).map((bus) => (
-          <Marker
+            <Marker
             key={bus.deviceId}
-            coordinate={{
+              coordinate={{
               latitude: bus.location.lat,
               longitude: bus.location.lng,
-            }}
+              }}
             onPress={() => setSelectedBus(bus.deviceId)}
-          >
+            >
             <View style={[styles.busMarker, { backgroundColor: getBusColor(bus.status) }]}>
               <Ionicons 
                 name="bus" 
@@ -190,8 +190,8 @@ export default function Location() {
                 color="white" 
                 style={{ transform: [{ rotate: `${bus.heading}deg` }] }}
               />
-            </View>
-          </Marker>
+              </View>
+            </Marker>
         ))}
       </MapView>
 

@@ -29,7 +29,7 @@ const Buses = () => {
     try {
       setError(null)
       // First try to get initial data from the WebSocket server
-      const response = await fetch(`${API_URL}/api/bus/status`)
+      const response = await fetch(`${API_URL}/api/bus/list`)
       if (!response.ok) {
         throw new Error('Failed to fetch buses')
       }
@@ -169,7 +169,7 @@ const Buses = () => {
                 </View>
               }
             />
-          </Pressable>
+         </Pressable>
         ))}
 
         {buses.length === 0 && (
@@ -181,7 +181,7 @@ const Buses = () => {
           </View>
         )}
       </ScrollView>
-    </View>
+     </View>
   )
 }
 
