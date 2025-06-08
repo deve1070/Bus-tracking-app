@@ -26,12 +26,21 @@ const httpServer = createServer(app);
 
 // Configure CORS
 const allowedOrigins = [
-  'http://localhost:3000',
   'http://localhost:5173',
-  'http://192.168.27.10:3000',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'http://localhost:5176',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'http://127.0.0.1:5175',
+  'http://127.0.0.1:5176',
+  'http://127.0.0.1:3000',
+  'exp://localhost:19000',
+  'exp://127.0.0.1:19000',
   'exp://192.168.27.10:19000',
-  'exp://192.168.27.10:19001',
-  'exp://192.168.27.10:19002'
+  'exp://192.168.27.10:8081',
+  'http://192.168.27.10:3000'
 ];
 
 // Configure Socket.IO with CORS
@@ -155,15 +164,16 @@ app.set('io', io);
 
 // Middleware
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.some(allowed => 
+      origin.startsWith(allowed.replace('*', '')) || 
+      allowedOrigins.includes(origin)
+    )) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked request from origin:', origin);
+      callback(new Error('Not allowed by CORS'));
     }
-    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
