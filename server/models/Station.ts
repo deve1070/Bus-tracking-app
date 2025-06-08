@@ -10,6 +10,7 @@ export interface IStation extends Document {
   description?: string;
   adminId?: mongoose.Types.ObjectId;
   stationId?: string;
+  buses: mongoose.Types.ObjectId[]; // Array of bus IDs assigned to this station
 }
 
 const stationSchema = new Schema<IStation>({
@@ -44,7 +45,11 @@ const stationSchema = new Schema<IStation>({
   stationId: {
     type: String,
     required: false
-  }
+  },
+  buses: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Bus'
+  }]
 }, {
   timestamps: true
 });

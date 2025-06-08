@@ -4,6 +4,12 @@ import DataTable from '../../../components/common/DataTable';
 import BusForm from './BusForm';
 import api from '../../../services/api';
 
+interface Station {
+  _id: string;
+  name: string;
+  location: string;
+}
+
 interface Bus {
   _id: string;
   busNumber: string;
@@ -35,8 +41,15 @@ interface Bus {
   };
 }
 
+interface Column {
+  header: string;
+  accessor: string;
+  render?: (value: any, row?: Bus) => React.ReactNode;
+}
+
 const BusManagement: React.FC = () => {
   const [buses, setBuses] = useState<Bus[]>([]);
+  const [stations, setStations] = useState<Station[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBus, setSelectedBus] = useState<Bus | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,17 +57,24 @@ const BusManagement: React.FC = () => {
   const [sortBy, setSortBy] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
-    fetchBuses();
+    fetchData();
   }, []);
 
-  const fetchBuses = async () => {
+  const fetchData = async () => {
     try {
-      const response = await api.get('/buses');
-      setBuses(response.data);
+      setLoading(true);
+      const [busesResponse, stationsResponse] = await Promise.all([
+        api.get('/buses'),
+        api.get('/stations')
+      ]);
+      setBuses(busesResponse.data);
+      setStations(stationsResponse.data);
     } catch (error) {
-      setError('Failed to fetch buses');
+      setError('Failed to fetch data');
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -65,109 +85,125 @@ const BusManagement: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleEditBus = (bus: Bus) => {
+  const handleEdit = (bus: Bus) => {
     setSelectedBus(bus);
-    setIsModalOpen(true);
+    setIsFormOpen(true);
   };
 
-  const handleDeleteBus = async (bus: Bus) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this bus?')) {
       try {
-        await api.delete(`/buses/${bus._id}`);
-        setBuses(buses.filter(b => b._id !== bus._id));
+        await api.delete(`/buses/${id}`);
+        setBuses(buses.filter(bus => bus._id !== id));
       } catch (error) {
+        console.error('Error deleting bus:', error);
         setError('Failed to delete bus');
       }
     }
   };
 
-  const handleSubmit = async (busData: Omit<Bus, '_id'>) => {
+  const handleSave = async (busData: Omit<Bus, '_id'>) => {
     try {
       if (selectedBus) {
         // Update existing bus
-        const response = await api.put(`/buses/${selectedBus._id}`, busData);
-        setBuses(buses.map(bus =>
+        const response = await api.put(`/buses/${selectedBus._id}`, {
+          ...busData,
+          currentStationId: busData.currentStationId || null
+        });
+        setBuses(buses.map(bus => 
           bus._id === selectedBus._id ? response.data : bus
         ));
       } else {
-        // Add new bus
-        const newBusData = {
+        // Create new bus
+        const response = await api.post('/buses', {
           ...busData,
-          currentLocation: {
-            type: 'Point',
-            coordinates: [0, 0] // Default coordinates
-          },
-          route: {
-            stations: [], // Empty array for stations
-            estimatedTime: busData.route.estimatedTime || 0
-          },
-          schedule: {
-            departureTime: busData.schedule.departureTime,
-            arrivalTime: busData.schedule.arrivalTime
-          },
-          isOnRoute: false,
-          currentPassengerCount: 0,
-          lastUpdateTime: new Date(),
-          status: 'INACTIVE' // Default status
-        };
-
-        const response = await api.post('/buses', newBusData);
+          currentStationId: busData.currentStationId || null
+        });
         setBuses([...buses, response.data]);
       }
-      setIsModalOpen(false);
+      setIsFormOpen(false);
       setSelectedBus(undefined);
-    } catch (error) {
-      setError('Failed to save bus');
+    } catch (error: any) {
       console.error('Error saving bus:', error);
+      if (error.response?.data?.message?.includes('duplicate key error')) {
+        setError('A bus with this number already exists. Please use a different bus number.');
+      } else {
+        setError('Failed to save bus. Please try again.');
+      }
     }
   };
 
-  const columns = [
-    { header: 'Bus Number', accessor: 'busNumber' },
-    { header: 'Route Number', accessor: 'routeNumber' },
-    { header: 'Capacity', accessor: 'capacity' },
+  const getStationName = (stationId?: string) => {
+    if (!stationId) return 'Not Assigned';
+    const station = stations.find(s => s._id === stationId);
+    return station ? `${station.name} - ${station.location}` : 'Unknown Station';
+  };
+
+  const columns: Column[] = [
+    {
+      header: 'Bus Number',
+      accessor: 'busNumber',
+      render: (value: string) => value
+    },
+    {
+      header: 'Route Number',
+      accessor: 'routeNumber',
+      render: (value: string) => value
+    },
+    {
+      header: 'Capacity',
+      accessor: 'capacity',
+      render: (value: number) => value
+    },
     {
       header: 'Status',
       accessor: 'status',
       render: (value: string) => (
-        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-          value === 'ACTIVE' 
-            ? 'bg-green-100 text-green-800' 
-            : value === 'MAINTENANCE' 
-            ? 'bg-yellow-100 text-yellow-800' 
-            : 'bg-red-100 text-red-800'
+        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+          value === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+          value === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' :
+          'bg-gray-100 text-gray-800'
         }`}>
           {value}
         </span>
-      ),
+      )
     },
     {
-      header: 'Current Location',
-      accessor: 'currentLocation',
-      render: (value: { coordinates: [number, number] }) => (
-        <span>
-          {value.coordinates[1].toFixed(4)}, {value.coordinates[0].toFixed(4)}
-        </span>
-      ),
+      header: 'Assigned Station',
+      accessor: 'currentStationId',
+      render: (value: any) => (
+        <div>
+          {value && value.name ? (
+            <div>
+              <div className="font-medium">{value.name}</div>
+              <div className="text-sm text-gray-500">{value.address}</div>
+            </div>
+          ) : (
+            <span className="text-gray-500">Not Assigned</span>
+          )}
+        </div>
+      )
     },
     {
-      header: 'Schedule',
-      accessor: 'schedule',
-      render: (value: { departureTime: string; arrivalTime: string }) => (
-        <span>
-          {new Date(value.departureTime).toLocaleTimeString()} - {new Date(value.arrivalTime).toLocaleTimeString()}
-        </span>
-      ),
-    },
-    {
-      header: 'Passengers',
-      accessor: 'currentPassengerCount',
-      render: (value: number, row: Bus) => (
-        <span>
-          {value}/{row.capacity}
-        </span>
-      ),
-    },
+      header: 'Actions',
+      accessor: '_id',
+      render: (value: string, row?: Bus) => row ? (
+        <div className="flex space-x-2">
+          <button
+            onClick={() => handleEdit(row)}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => handleDelete(row._id)}
+            className="text-red-600 hover:text-red-800"
+          >
+            Delete
+          </button>
+        </div>
+      ) : null
+    }
   ];
 
   const statusOptions = [
@@ -181,13 +217,15 @@ const BusManagement: React.FC = () => {
     { value: 'routeNumber', label: 'Route Number' },
     { value: 'capacity', label: 'Capacity' },
     { value: 'status', label: 'Status' },
+    { value: 'currentStationId', label: 'Station' },
   ];
 
   const filteredBuses = buses
     .filter(bus => {
       const matchesSearch = 
         bus.busNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        bus.routeNumber.toLowerCase().includes(searchTerm.toLowerCase());
+        bus.routeNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getStationName(bus.currentStationId).toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = !statusFilter || bus.status === statusFilter;
       return matchesSearch && matchesStatus;
     })
@@ -202,6 +240,8 @@ const BusManagement: React.FC = () => {
           return b.capacity - a.capacity;
         case 'status':
           return a.status.localeCompare(b.status);
+        case 'currentStationId':
+          return getStationName(a.currentStationId).localeCompare(getStationName(b.currentStationId));
         default:
           return 0;
       }
@@ -216,38 +256,44 @@ const BusManagement: React.FC = () => {
   }
 
   return (
-    <div className="py-6">
+    <div className="container mx-auto px-4 py-8">
       {error && (
-        <div className="mb-4 rounded-md bg-red-50 p-4">
-          <div className="text-sm text-red-700">{error}</div>
+        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+          {error}
         </div>
       )}
 
-      <DataTable
-        title="Bus Management"
-        description="Manage and track all buses in the system"
-        columns={columns}
-        data={filteredBuses}
-        onAdd={handleAddBus}
-        onEdit={handleEditBus}
-        onDelete={handleDeleteBus}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-        statusOptions={statusOptions}
-        sortOptions={sortOptions}
-      />
+      <div className="bg-white shadow rounded-lg">
+        <DataTable
+          columns={columns}
+          data={buses}
+          title="Bus Management"
+          description="Manage and track all buses in the system"
+          onAdd={() => {
+            setSelectedBus(undefined);
+            setIsFormOpen(true);
+          }}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          statusOptions={statusOptions}
+          sortOptions={sortOptions}
+        />
+      </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
+      {isFormOpen && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <BusForm
               bus={selectedBus}
-              onSubmit={handleSubmit}
-              onCancel={() => setIsModalOpen(false)}
+              onSubmit={handleSave}
+              onCancel={() => {
+                setIsFormOpen(false);
+                setSelectedBus(undefined);
+              }}
             />
           </div>
         </div>

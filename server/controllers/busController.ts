@@ -17,138 +17,81 @@ interface MongoError extends Error {
   keyPattern?: Record<string, number>;
 }
 
-export const createBus = async (req: AuthRequest, res: Response) => {
+export const createBus = async (req: Request, res: Response) => {
   try {
-    const {
-      busNumber,
-      routeNumber,
-      capacity,
-      deviceId,
-      route,
-      schedule,
-      status
-    } = req.body;
-
-    // Validate required fields
-    if (!busNumber || !routeNumber || !capacity || !deviceId) {
-      return res.status(400).json({ 
-        error: 'Missing required fields',
-        required: ['busNumber', 'routeNumber', 'capacity', 'deviceId']
-      });
-    }
-
+    const { currentStationId, ...busData } = req.body;
+    
+    // Create the bus first
     const bus = new Bus({
-      busNumber,
-      routeNumber,
-      capacity,
-      deviceId,
-      route: route || {
-        stations: [],
-        estimatedTime: 0
-      },
-      schedule: schedule || {
-        departureTime: new Date().toISOString(),
-        arrivalTime: new Date().toISOString()
-      },
-      currentLocation: {
-        type: 'Point',
-        coordinates: [0, 0]
-      },
-      status: status || 'INACTIVE',
-      isOnRoute: false,
-      currentPassengerCount: 0,
-      lastUpdateTime: new Date()
+      ...busData,
+      currentStationId: currentStationId || undefined
     });
-
     await bus.save();
-    res.status(201).json(bus);
-  } catch (error) {
-    console.error('Error creating bus:', error);
-    const mongoError = error as MongoError;
-    if (mongoError.code === 11000) {
-      // Duplicate key error
-      return res.status(400).json({ 
-        error: 'Bus number or device ID already exists' 
-      });
+
+    // If a station is assigned, update the station's buses array
+    if (currentStationId) {
+      await Station.findByIdAndUpdate(
+        currentStationId,
+        { $addToSet: { buses: bus._id } }
+      );
     }
-    res.status(400).json({ error: 'Failed to create bus' });
+
+    res.status(201).json(bus);
+  } catch (error: any) {
+    console.error('Error creating bus:', error);
+    if (error.code === 11000) {
+      res.status(400).json({ message: 'Bus number already exists' });
+    } else {
+      res.status(500).json({ message: 'Error creating bus', error: error.message });
+    }
   }
 };
 
-export const updateBus = async (req: AuthRequest, res: Response) => {
+export const updateBus = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    let updateData = req.body;
-    const userRole = req.user.role;
+    const { currentStationId, ...updateData } = req.body;
+    const busId = req.params.id;
 
-    console.log('Update bus request:', {
-      busId: id,
-      userRole,
-      stationId: req.user.stationId,
-      updateData
-    });
-
-    // For station admins, verify the bus belongs to their station
-    if (userRole === 'STATION_ADMIN') {
-      const stationId = req.user.stationId;
-      if (!stationId) {
-        console.log('Station admin has no station ID');
-        return res.status(403).json({ 
-          error: 'Station admin not associated with any station',
-          details: 'Please contact the main administrator to assign you to a station'
-        });
-      }
-
-      const bus = await Bus.findById(id).populate('route.stations');
-      console.log('Found bus:', {
-        busId: bus?._id,
-        hasRoute: !!bus?.route,
-        stations: bus?.route?.stations,
-        stationId
-      });
-      
-      if (!bus) {
-        console.log('Bus not found');
-        return res.status(404).json({ error: 'Bus not found' });
-      }
-
-      // Check if the bus is assigned to the station admin's station
-      if (!bus.route?.stations || !bus.route.stations.some(station => station._id.toString() === stationId.toString())) {
-        console.log('Bus not assigned to station admin\'s station');
-        return res.status(403).json({ 
-          error: 'Not authorized to update this bus',
-          details: 'This bus is not assigned to your station'
-        });
-      }
-
-      // For station admins, only allow updating certain fields
-      const allowedFields = ['status', 'schedule', 'route.estimatedTime'];
-      const filteredUpdateData = Object.keys(updateData).reduce((acc, key) => {
-        if (allowedFields.includes(key) || key.startsWith('schedule.') || key.startsWith('route.')) {
-          acc[key] = updateData[key];
-        }
-        return acc;
-      }, {} as any);
-
-      updateData = filteredUpdateData;
+    // Get the current bus to check if it was assigned to a station
+    const currentBus = await Bus.findById(busId);
+    if (!currentBus) {
+      return res.status(404).json({ message: 'Bus not found' });
     }
 
+    // If the bus was previously assigned to a station, remove it from that station
+    if (currentBus.currentStationId) {
+      await Station.findByIdAndUpdate(
+        currentBus.currentStationId,
+        { $pull: { buses: busId } }
+      );
+    }
+
+    // Update the bus with new data
     const updatedBus = await Bus.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
+      busId,
+      { 
+        ...updateData,
+        currentStationId: currentStationId || undefined
+      },
+      { new: true }
     );
 
-    if (!updatedBus) {
-      console.log('Bus not found after update attempt');
-      return res.status(404).json({ error: 'Bus not found' });
+    // If a new station is assigned, add the bus to that station
+    if (currentStationId) {
+      await Station.findByIdAndUpdate(
+        currentStationId,
+        { $addToSet: { buses: busId } }
+      );
     }
 
-    console.log('Bus updated successfully');
     res.json(updatedBus);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating bus:', error);
-    res.status(400).json({ error: 'Failed to update bus' });
+    if (error.code === 11000) {
+      res.status(400).json({ message: 'Bus number already exists' });
+    } else {
+      res.status(500).json({ message: 'Error updating bus', error: error.message });
+    }
   }
 };
 
@@ -177,10 +120,14 @@ export const getBuses = async (req: AuthRequest, res: Response) => {
 
     const buses = await Bus.find(query)
       .populate('driverId', 'firstName lastName')
-      .populate('currentStationId', 'name');
+      .populate({
+        path: 'currentStationId',
+        select: 'name location address'
+      });
 
     res.json(buses);
   } catch (error) {
+    console.error('Error fetching buses:', error);
     res.status(400).json({ error: 'Failed to fetch buses' });
   }
 };
@@ -190,7 +137,10 @@ export const getBusById = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const bus = await Bus.findById(id)
       .populate('driverId', 'firstName lastName')
-      .populate('currentStationId', 'name')
+      .populate({
+        path: 'currentStationId',
+        select: 'name location address'
+      })
       .populate('route.stations', 'name location');
 
     if (!bus) {
@@ -199,6 +149,7 @@ export const getBusById = async (req: AuthRequest, res: Response) => {
 
     res.json(bus);
   } catch (error) {
+    console.error('Error fetching bus:', error);
     res.status(400).json({ error: 'Failed to fetch bus' });
   }
 };

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import api from '../../../services/api';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface Bus {
   _id: string;
@@ -22,10 +23,18 @@ interface Bus {
   };
 }
 
+interface Driver {
+  _id: string;
+  name: string;
+  licenseNumber: string;
+}
+
 const UpdateBus: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [bus, setBus] = useState<Bus | null>(null);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     busNumber: '',
@@ -33,6 +42,7 @@ const UpdateBus: React.FC = () => {
     capacity: 0,
     deviceId: '',
     status: 'INACTIVE' as const,
+    driverId: '',
     schedule: {
       departureTime: '',
       arrivalTime: ''
@@ -44,37 +54,52 @@ const UpdateBus: React.FC = () => {
   });
 
   useEffect(() => {
-    const fetchBus = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get(`/buses/${id}`);
-        setBus(response.data);
+        // Fetch bus details
+        const busResponse = await api.get(`/buses/${id}`);
+        const busData = busResponse.data;
+
+        // Verify that the bus belongs to the station admin's station
+        if (busData.currentStationId !== user?.stationId) {
+          toast.error('You do not have permission to update this bus');
+          navigate('/station-admin/buses');
+          return;
+        }
+
+        setBus(busData);
         setFormData({
-          busNumber: response.data.busNumber,
-          routeNumber: response.data.routeNumber,
-          capacity: response.data.capacity,
-          deviceId: response.data.deviceId,
-          status: response.data.status,
+          busNumber: busData.busNumber,
+          routeNumber: busData.routeNumber,
+          capacity: busData.capacity,
+          deviceId: busData.deviceId,
+          status: busData.status,
+          driverId: busData.driverId || '',
           schedule: {
-            departureTime: response.data.schedule.departureTime,
-            arrivalTime: response.data.schedule.arrivalTime
+            departureTime: busData.schedule.departureTime,
+            arrivalTime: busData.schedule.arrivalTime
           },
           route: {
-            stations: response.data.route.stations || [],
-            estimatedTime: response.data.route.estimatedTime
+            stations: busData.route.stations || [],
+            estimatedTime: busData.route.estimatedTime
           }
         });
+
+        // Fetch available drivers
+        const driversResponse = await api.get('/drivers');
+        setDrivers(driversResponse.data);
       } catch (error) {
         toast.error('Failed to fetch bus details');
-        console.error('Error fetching bus:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
 
     if (id) {
-      fetchBus();
+      fetchData();
     }
-  }, [id]);
+  }, [id, user?.stationId, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,34 +181,23 @@ const UpdateBus: React.FC = () => {
           </div>
 
           <div>
-            <label htmlFor="capacity" className="block text-sm font-medium text-gray-700">
-              Capacity
+            <label htmlFor="driverId" className="block text-sm font-medium text-gray-700">
+              Assign Driver
             </label>
-            <input
-              type="number"
-              name="capacity"
-              id="capacity"
-              value={formData.capacity}
+            <select
+              name="driverId"
+              id="driverId"
+              value={formData.driverId}
               onChange={handleChange}
-              required
-              min="1"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="deviceId" className="block text-sm font-medium text-gray-700">
-              Device ID
-            </label>
-            <input
-              type="text"
-              name="deviceId"
-              id="deviceId"
-              value={formData.deviceId}
-              onChange={handleChange}
-              required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            />
+            >
+              <option value="">Select a driver</option>
+              {drivers.map(driver => (
+                <option key={driver._id} value={driver._id}>
+                  {driver.name} - {driver.licenseNumber}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -230,31 +244,6 @@ const UpdateBus: React.FC = () => {
               value={formData.schedule.arrivalTime.slice(0, 16)}
               onChange={handleScheduleChange}
               required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="estimatedTime" className="block text-sm font-medium text-gray-700">
-              Estimated Time (minutes)
-            </label>
-            <input
-              type="number"
-              name="estimatedTime"
-              id="estimatedTime"
-              value={formData.route.estimatedTime}
-              onChange={(e) => {
-                const value = parseInt(e.target.value) || 0;
-                setFormData(prev => ({
-                  ...prev,
-                  route: {
-                    ...prev.route,
-                    estimatedTime: value
-                  }
-                }));
-              }}
-              required
-              min="0"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
             />
           </div>
