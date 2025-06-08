@@ -106,30 +106,22 @@ const BusManagement: React.FC = () => {
     try {
       if (selectedBus) {
         // Update existing bus
-        const response = await api.put(`/buses/${selectedBus._id}`, {
-          ...busData,
-          currentStationId: busData.currentStationId || null
-        });
-        setBuses(buses.map(bus => 
-          bus._id === selectedBus._id ? response.data : bus
-        ));
+        await api.put(`/buses/${selectedBus._id}`, busData);
       } else {
         // Create new bus
-        const response = await api.post('/buses', {
-          ...busData,
-          currentStationId: busData.currentStationId || null
-        });
-        setBuses([...buses, response.data]);
+        await api.post('/buses', busData);
       }
+      
+      // Refresh the bus list
+      const response = await api.get('/buses');
+      setBuses(response.data);
+      
+      // Close the form and reset selected bus
       setIsFormOpen(false);
       setSelectedBus(undefined);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving bus:', error);
-      if (error.response?.data?.message?.includes('duplicate key error')) {
-        setError('A bus with this number already exists. Please use a different bus number.');
-      } else {
-        setError('Failed to save bus. Please try again.');
-      }
+      throw error;
     }
   };
 
