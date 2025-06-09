@@ -427,11 +427,12 @@ export const getStationBuses = async (req: AuthRequest, res: Response) => {
     }
 
     console.log('Finding buses for station:', stationId);
+    console.log('Station ID:', stationId);
     const buses = await Bus.find({
-      'route.stations': stationId
+      currentStationId: stationId
     })
     .populate('driverId', 'firstName lastName')
-    .populate('currentStationId', 'name')
+    .populate('currentStationId', 'name location address')
     .populate('route.stations', 'name location');
 
     console.log('Found buses:', buses.length);

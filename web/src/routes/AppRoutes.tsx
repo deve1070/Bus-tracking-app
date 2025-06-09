@@ -18,7 +18,7 @@ import PaymentManagement from '../pages/main-admin/payments/PaymentManagement';
 
 // Station Admin Pages
 import StationDashboard from '../pages/station-admin/dashboard/Dashboard';
-import StationBuses from '../pages/station-admin/buses/BusManagement';
+import StationBusManagement from '../pages/station-admin/buses/StationBusManagement';
 import UpdateBus from '../pages/station-admin/buses/UpdateBus';
 import StationNotifications from '../pages/station-admin/notifications/StationNotifications';
 import StationMonitoring from '../pages/station-admin/monitoring/RealTimeMonitoring';
@@ -60,7 +60,7 @@ const AppRoutes = () => {
       ) : (
         <Route path="/station-admin" element={<StationAdminLayout />}>
           <Route index element={<StationDashboard />} />
-          <Route path="buses" element={<StationBuses />} />
+          <Route path="buses" element={<StationBusManagement />} />
           <Route path="buses/update/:id" element={<UpdateBus />} />
           <Route path="monitoring" element={<StationMonitoring />} />
           <Route path="notifications" element={<StationNotifications />} />

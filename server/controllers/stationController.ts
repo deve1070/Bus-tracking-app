@@ -183,12 +183,12 @@ export const getStationStats = async (req: AuthRequest, res: Response) => {
 
     // Get total buses assigned to this station
     const totalBuses = await Bus.countDocuments({
-      'route.stations': stationId
+      currentStationId: stationId
     });
 
     // Get active buses
     const activeBuses = await Bus.countDocuments({
-      'route.stations': stationId,
+      currentStationId: stationId,
       status: 'ACTIVE'
     });
 

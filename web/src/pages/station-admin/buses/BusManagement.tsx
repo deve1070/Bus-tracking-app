@@ -12,10 +12,26 @@ interface Bus {
   capacity: number;
   deviceId: string;
   status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
-  driverId?: string;
-  currentStationId?: string;
+  driverId?: {
+    firstName: string;
+    lastName: string;
+  };
+  currentStationId?: {
+    name: string;
+    location: {
+      type: string;
+      coordinates: [number, number];
+    };
+    address: string;
+  };
   route: {
-    stations: string[];
+    stations: Array<{
+      name: string;
+      location: {
+        type: string;
+        coordinates: [number, number];
+      };
+    }>;
     estimatedTime: number;
   };
   schedule: {
@@ -42,7 +58,7 @@ const StationBuses: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const response = await api.get(`/buses/station/${user?.stationId}`);
+      const response = await api.get('/buses/station');
       setBuses(response.data);
     } catch (error: any) {
       console.error('Error fetching station buses:', error);
@@ -186,6 +202,10 @@ const StationBuses: React.FC = () => {
                       <div className="text-sm text-gray-500">
                         <div>Capacity: {bus.capacity}</div>
                         <div>Device ID: {bus.deviceId}</div>
+                        {bus.driverId && (
+                          <div>Driver: {bus.driverId.firstName} {bus.driverId.lastName}</div>
+                        )}
+                        <div>Schedule: {new Date(bus.schedule.departureTime).toLocaleTimeString()} - {new Date(bus.schedule.arrivalTime).toLocaleTimeString()}</div>
                       </div>
                       <button
                         onClick={() => handleUpdate(bus._id)}

@@ -1,85 +1,100 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { Bus, RefreshCw } from 'lucide-react';
+import api from '../../../services/api';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface StationBus {
-  id: string;
-  plateNumber: string;
-  route: string;
-  status: 'arrived' | 'departed' | 'delayed' | 'cancelled';
-  scheduledArrival: string;
-  actualArrival?: string;
-  scheduledDeparture: string;
-  actualDeparture?: string;
-  driver: string;
-  passengers: number;
+  _id: string;
+  busNumber: string;
+  routeNumber: string;
+  capacity: number;
+  deviceId: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
+  driverId?: {
+    firstName: string;
+    lastName: string;
+  };
+  currentStationId?: {
+    name: string;
+    location: {
+      type: string;
+      coordinates: [number, number];
+    };
+    address: string;
+  };
+  route: {
+    stations: Array<{
+      name: string;
+      location: {
+        type: string;
+        coordinates: [number, number];
+      };
+    }>;
+    estimatedTime: number;
+  };
+  schedule: {
+    departureTime: string;
+    arrivalTime: string;
+  };
 }
 
 const StationBusManagement: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [buses, setBuses] = useState<StationBus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
+    console.log('User in StationBusManagement:', user);
+    if (!user) {
+      setLoading(false);
+      setError('User not loaded');
+      return;
+    }
+    if (!user.stationId) {
+      setLoading(false);
+      setError('No station assigned to this user');
+      return;
+    }
     fetchStationBuses();
-  }, []);
+  }, [user]);
 
   const fetchStationBuses = async () => {
     try {
-      const response = await fetch('/api/station/buses');
-      if (response.ok) {
-        const data = await response.json();
-        setBuses(data);
-      } else {
-        setError('Failed to fetch bus data');
-      }
-    } catch (error) {
-      setError('An error occurred while fetching bus data');
+      setLoading(true);
+      setError('');
+      const response = await api.get('/buses/station');
+      setBuses(response.data);
+    } catch (error: any) {
+      console.error('Error fetching station buses:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to fetch station buses';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const handleStatusUpdate = async (busId: string, newStatus: StationBus['status']) => {
-    try {
-      const response = await fetch(`/api/station/buses/${busId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        fetchStationBuses();
-      } else {
-        setError('Failed to update bus status');
-      }
-    } catch (error) {
-      setError('An error occurred while updating bus status');
-    }
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchStationBuses();
   };
 
-  const getStatusColor = (status: StationBus['status']) => {
-    switch (status) {
-      case 'arrived':
-        return 'bg-green-100 text-green-800';
-      case 'departed':
-        return 'bg-blue-100 text-blue-800';
-      case 'delayed':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const handleUpdate = (busId: string) => {
+    navigate(`/station-admin/buses/update/${busId}`);
   };
 
   const filteredBuses = buses.filter(bus => {
-    const matchesSearch = bus.plateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        bus.route.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        bus.driver.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = bus.busNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        bus.routeNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (bus.driverId && `${bus.driverId.firstName} ${bus.driverId.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = !statusFilter || bus.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -92,122 +107,101 @@ const StationBusManagement: React.FC = () => {
     );
   }
 
-  return (
-    <div className="p-6">
-      <div className="sm:flex sm:items-center">
-        <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Bus Management</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Manage and track buses at your station
-          </p>
-        </div>
-      </div>
-
-      {error && (
-        <div className="mt-4 rounded-md bg-red-50 p-4">
-          <div className="text-sm text-red-700">{error}</div>
-        </div>
-      )}
-
-      {/* Filters and Search */}
-      <div className="mt-4 flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            placeholder="Search buses..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 pl-10 pr-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-          />
-          <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-        </div>
-
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-        >
-          <option value="">All Statuses</option>
-          <option value="arrived">Arrived</option>
-          <option value="departed">Departed</option>
-          <option value="delayed">Delayed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-      </div>
-
-      {/* Buses Table */}
-      <div className="mt-8 flex flex-col">
-        <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
-                      Bus
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Route
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Status
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Schedule
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Driver
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Passengers
-                    </th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {filteredBuses.map((bus) => (
-                    <tr key={bus.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                        {bus.plateNumber}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {bus.route}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(bus.status)}`}>
-                          {bus.status}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        <div>Arrival: {bus.actualArrival || bus.scheduledArrival}</div>
-                        <div>Departure: {bus.actualDeparture || bus.scheduledDeparture}</div>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {bus.driver}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {bus.passengers}
-                      </td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                        <select
-                          value={bus.status}
-                          onChange={(e) => handleStatusUpdate(bus.id, e.target.value as StationBus['status'])}
-                          className="rounded-md border-gray-300 text-sm focus:border-blue-500 focus:ring-blue-500"
-                        >
-                          <option value="arrived">Mark as Arrived</option>
-                          <option value="departed">Mark as Departed</option>
-                          <option value="delayed">Mark as Delayed</option>
-                          <option value="cancelled">Mark as Cancelled</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+  if (error) {
+    return (
+      <div className="py-6">
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="text-center">
+            <Bus className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">Error Loading Buses</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {error}
+            </p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="py-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900">Station Buses</h1>
+          <button
+            onClick={handleRefresh}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search by bus number, route, or driver..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            />
+          </div>
+          <div className="w-full sm:w-48">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            >
+              <option value="">All Status</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+              <option value="MAINTENANCE">Maintenance</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Bus List */}
+        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          <ul className="divide-y divide-gray-200">
+            {filteredBuses.map((bus) => (
+              <li key={bus._id}>
+                <div className="px-4 py-4 sm:px-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Bus className="h-6 w-6 text-blue-600" />
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-indigo-600">Bus #{bus.busNumber}</div>
+                        <div className="text-sm text-gray-500">Route: {bus.routeNumber}</div>
+                        <div className="text-sm text-gray-500">
+                          Status: <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            bus.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                            bus.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {bus.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <button
+                        onClick={() => handleUpdate(bus._id)}
+                        className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        Update
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>
