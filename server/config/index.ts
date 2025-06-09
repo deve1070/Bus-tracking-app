@@ -9,7 +9,7 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   
   // MongoDB configuration
-  mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/bus-tracking',
+  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/bus-tracking',
   
   // JWT configuration
   jwtSecret: process.env.JWT_SECRET || 'your-secret-key',

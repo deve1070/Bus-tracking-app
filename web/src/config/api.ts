@@ -1,5 +1,5 @@
-export const API_BASE_URL = 'http://192.168.27.10:3000/api';
-export const WS_URL = 'http://192.168.27.10:3000';
+export const API_BASE_URL = 'http://localhost:5000/api';
+export const WS_URL = 'http://localhost:5000';
 
 export const API_ENDPOINTS = {
   AUTH: {

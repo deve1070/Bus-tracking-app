@@ -196,13 +196,33 @@ app.use((req, res, next) => {
 });
 
 // Connect to MongoDB with timeout
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/bus-tracking', {
-  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/bus-tracking', {
+  serverSelectionTimeoutMS: 30000,
+  socketTimeoutMS: 45000,
+  maxPoolSize: 10,
+  minPoolSize: 5,
+  family: 4
 })
-  .then(() => console.log('Connected to MongoDB'))
+  .then(() => {
+    console.log('Connected to MongoDB successfully');
+    // Log the connection details (without sensitive information)
+    const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/bus-tracking';
+    const dbName = uri.split('/').pop()?.split('?')[0] || 'bus-tracking';
+    console.log(`Connected to database: ${dbName}`);
+  })
   .catch((error) => {
     console.error('MongoDB connection error:', error);
+    // Log more detailed error information
+    if (error.name === 'MongoServerSelectionError') {
+      console.error('Could not connect to MongoDB server. Please check:');
+      console.error('1. MongoDB server is running');
+      console.error('2. Network connectivity');
+      console.error('3. IP whitelist in MongoDB Atlas');
+      console.error('4. Username and password are correct');
+      console.error('5. Your IP address is whitelisted in MongoDB Atlas');
+    } else if (error.name === 'MongoParseError') {
+      console.error('Invalid MongoDB connection string. Please check your MONGO_URI format');
+    }
     process.exit(1); // Exit if cannot connect to database
   });
 

@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { UserRole, LoginResponse } from '../../types/auth';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { Bus } from 'lucide-react';
-import { API_BASE_URL } from '../../config/api';
+import { authService } from '../../services/auth';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -19,17 +18,20 @@ const LoginPage: React.FC = () => {
     setError('');
     setLoading(true);
 
-    try {
-      console.log('Attempting login with:', { email });
-      
-      const response = await axios.post<LoginResponse>(`${API_BASE_URL}/auth/login`, { 
-        email, 
-        password 
-      });
+    // Validate inputs
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      setLoading(false);
+      return;
+    }
 
-      console.log('Login response:', response.data);
+    try {
+      console.log('Attempting login with:', { email, password: '***' });
       
-      const { user, token } = response.data;
+      const response = await authService.login({ email, password });
+      console.log('Login response:', response);
+      
+      const { user, token } = response;
       
       // Store auth data
       localStorage.setItem('token', token);
@@ -37,7 +39,7 @@ const LoginPage: React.FC = () => {
       
       console.log('User role:', user.role);
       
-      // Navigate based on role and force refresh
+      // Navigate based on role
       switch (user.role) {
         case 'MainAdmin':
           console.log('Navigating to main admin dashboard');
@@ -54,15 +56,8 @@ const LoginPage: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      if (err.response?.status === 401) {
-        setError('Invalid email or password. Please try again.');
-      } else {
-        setError(
-          err.response?.data?.error || 
-          err.message || 
-          'Login failed. Please try again.'
-        );
-      }
+      const errorMessage = err.response?.data?.details || err.response?.data?.error || err.message || 'Login failed. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

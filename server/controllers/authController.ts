@@ -76,6 +76,18 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
+    
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ 
+        error: 'Missing credentials',
+        details: {
+          email: !email ? 'Email is required' : null,
+          password: !password ? 'Password is required' : null
+        }
+      });
+    }
+
     console.log('Login attempt for email:', email);
 
     // Find user without validation
@@ -134,9 +146,12 @@ export const login = async (req: Request, res: Response) => {
       },
       token
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Login error:', error);
-    res.status(400).json({ error: 'Login failed' });
+    res.status(400).json({ 
+      error: 'Login failed',
+      details: error.message || 'An unexpected error occurred'
+    });
   }
 };
 
