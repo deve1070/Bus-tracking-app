@@ -1,24 +1,32 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
 export interface IBus extends Document {
   busNumber: string;
   routeNumber: string;
   capacity: number;
   deviceId: string; // GPS tracker device ID
+  status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
+  driverId?: Types.ObjectId;
+  currentStationId?: Types.ObjectId;
+  stationId: Types.ObjectId;
   currentLocation: {
     type: string;
     coordinates: [number, number]; // [longitude, latitude]
   };
-  status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
-  driverId?: mongoose.Types.ObjectId;
-  currentStationId?: mongoose.Types.ObjectId;
   route: {
-    stations: mongoose.Types.ObjectId[];
+    stations: Array<{
+      stationId: Types.ObjectId;
+      name: string;
+      location: {
+        type: string;
+        coordinates: [number, number];
+      };
+    }>;
     estimatedTime: number; // in minutes
   };
   schedule: {
-    departureTime: string;
-    arrivalTime: string;
+    departureTime: Date;
+    arrivalTime: Date;
   };
   lastUpdateTime: Date;
   isOnRoute: boolean;
@@ -53,17 +61,6 @@ const busSchema = new Schema<IBus>({
     unique: true,
     trim: true
   },
-  currentLocation: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      required: true
-    },
-    coordinates: {
-      type: [Number],
-      required: true
-    }
-  },
   status: {
     type: String,
     enum: ['ACTIVE', 'INACTIVE', 'MAINTENANCE'],
@@ -77,10 +74,44 @@ const busSchema = new Schema<IBus>({
     type: Schema.Types.ObjectId,
     ref: 'Station'
   },
+  stationId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Station',
+    required: true
+  },
+  currentLocation: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: true
+    },
+    coordinates: {
+      type: [Number],
+      required: true
+    }
+  },
   route: {
     stations: [{
-      type: Schema.Types.ObjectId,
-      ref: 'Station'
+      stationId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Station',
+        required: true
+      },
+      name: {
+        type: String,
+        required: true
+      },
+      location: {
+        type: {
+          type: String,
+          enum: ['Point'],
+          default: 'Point'
+        },
+        coordinates: {
+          type: [Number],
+          required: true
+        }
+      }
     }],
     estimatedTime: {
       type: Number,
@@ -89,11 +120,11 @@ const busSchema = new Schema<IBus>({
   },
   schedule: {
     departureTime: {
-      type: String,
+      type: Date,
       required: true
     },
     arrivalTime: {
-      type: String,
+      type: Date,
       required: true
     }
   },
@@ -129,6 +160,11 @@ const busSchema = new Schema<IBus>({
 });
 
 // Create geospatial index for location queries
+busSchema.index({ 'route.stations.location': '2dsphere' });
+
+// Create indexes
+busSchema.index({ busNumber: 1 });
+busSchema.index({ deviceId: 1 });
 busSchema.index({ currentLocation: '2dsphere' });
 
 export const Bus = mongoose.model<IBus>('Bus', busSchema); 

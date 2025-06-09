@@ -5,7 +5,11 @@ import api from '../../../services/api';
 interface Station {
   _id: string;
   name: string;
-  location: string;
+  location: {
+    type: string;
+    coordinates: [number, number];
+  };
+  address: string;
 }
 
 interface Bus {
@@ -20,9 +24,17 @@ interface Bus {
   };
   status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
   driverId?: string;
+  stationId?: string;
   currentStationId?: string;
   route: {
-    stations: string[];
+    stations: Array<{
+      stationId: string;
+      name: string;
+      location: {
+        type: string;
+        coordinates: [number, number];
+      };
+    }>;
     estimatedTime: number;
   };
   schedule: {
@@ -52,6 +64,7 @@ const BusForm: React.FC<BusFormProps> = ({ bus, onSubmit, onCancel }) => {
       coordinates: [0, 0]
     },
     status: 'INACTIVE',
+    stationId: '',
     currentStationId: '',
     route: {
       stations: [],
@@ -71,13 +84,7 @@ const BusForm: React.FC<BusFormProps> = ({ bus, onSubmit, onCancel }) => {
     const fetchStations = async () => {
       try {
         const response = await api.get('/stations');
-        // Ensure we only store the necessary station data
-        const formattedStations = response.data.map((station: any) => ({
-          _id: station._id,
-          name: station.name,
-          location: station.location
-        }));
-        setStations(formattedStations);
+        setStations(response.data);
       } catch (error) {
         console.error('Error fetching stations:', error);
       }
@@ -92,50 +99,18 @@ const BusForm: React.FC<BusFormProps> = ({ bus, onSubmit, onCancel }) => {
         routeNumber: bus.routeNumber,
         capacity: bus.capacity,
         deviceId: bus.deviceId,
-        currentLocation: {
-          type: 'Point',
-          coordinates: [0, 0] as [number, number]
-        },
+        currentLocation: bus.currentLocation,
         status: bus.status,
         driverId: bus.driverId,
+        stationId: bus.stationId,
         currentStationId: typeof bus.currentStationId === 'object' ? (bus.currentStationId as any)._id : bus.currentStationId || '',
-        route: {
-          stations: bus.route?.stations || [],
-          estimatedTime: bus.route?.estimatedTime || 0
-        },
-        schedule: {
-          departureTime: bus.schedule?.departureTime || new Date().toISOString(),
-          arrivalTime: bus.schedule?.arrivalTime || new Date().toISOString()
-        },
+        route: bus.route,
+        schedule: bus.schedule,
         isOnRoute: bus.isOnRoute,
         currentPassengerCount: bus.currentPassengerCount,
         lastUpdateTime: bus.lastUpdateTime
       };
       setFormData(formattedBus);
-    } else {
-      setFormData({
-        busNumber: '',
-        routeNumber: '',
-        capacity: 0,
-        deviceId: '',
-        currentLocation: {
-          type: 'Point',
-          coordinates: [0, 0] as [number, number]
-        },
-        status: 'INACTIVE',
-        currentStationId: '',
-        route: {
-          stations: [],
-          estimatedTime: 0
-        },
-        schedule: {
-          departureTime: new Date().toISOString(),
-          arrivalTime: new Date().toISOString()
-        },
-        isOnRoute: false,
-        currentPassengerCount: 0,
-        lastUpdateTime: new Date()
-      });
     }
   }, [bus]);
 
@@ -143,14 +118,14 @@ const BusForm: React.FC<BusFormProps> = ({ bus, onSubmit, onCancel }) => {
     e.preventDefault();
     
     // Validate required fields
-    if (!formData.busNumber || !formData.routeNumber || !formData.capacity || !formData.deviceId) {
+    if (!formData.busNumber || !formData.routeNumber || !formData.capacity || !formData.deviceId || !formData.stationId) {
+      alert('Please fill in all required fields');
       return;
     }
 
     // Format the data before submission
     const formattedData: Omit<Bus, '_id'> = {
       ...formData,
-      currentStationId: formData.currentStationId || undefined,
       currentLocation: {
         type: 'Point',
         coordinates: formData.currentLocation.coordinates
@@ -207,7 +182,7 @@ const BusForm: React.FC<BusFormProps> = ({ bus, onSubmit, onCancel }) => {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>
           <label htmlFor="busNumber" className="block text-sm font-medium text-gray-700">
-            Bus Number
+            Bus Number *
           </label>
           <input
             type="text"
@@ -215,14 +190,14 @@ const BusForm: React.FC<BusFormProps> = ({ bus, onSubmit, onCancel }) => {
             id="busNumber"
             value={formData.busNumber}
             onChange={handleChange}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           />
         </div>
 
         <div>
           <label htmlFor="routeNumber" className="block text-sm font-medium text-gray-700">
-            Route Number
+            Route Number *
           </label>
           <input
             type="text"
@@ -230,14 +205,14 @@ const BusForm: React.FC<BusFormProps> = ({ bus, onSubmit, onCancel }) => {
             id="routeNumber"
             value={formData.routeNumber}
             onChange={handleChange}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           />
         </div>
 
         <div>
           <label htmlFor="capacity" className="block text-sm font-medium text-gray-700">
-            Capacity
+            Capacity *
           </label>
           <input
             type="number"
@@ -245,15 +220,15 @@ const BusForm: React.FC<BusFormProps> = ({ bus, onSubmit, onCancel }) => {
             id="capacity"
             value={formData.capacity}
             onChange={handleChange}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             required
             min="1"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           />
         </div>
 
         <div>
           <label htmlFor="deviceId" className="block text-sm font-medium text-gray-700">
-            Device ID
+            Device ID *
           </label>
           <input
             type="text"
@@ -261,26 +236,27 @@ const BusForm: React.FC<BusFormProps> = ({ bus, onSubmit, onCancel }) => {
             id="deviceId"
             value={formData.deviceId}
             onChange={handleChange}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           />
         </div>
 
         <div>
-          <label htmlFor="currentStationId" className="block text-sm font-medium text-gray-700">
-            Assign to Station
+          <label htmlFor="stationId" className="block text-sm font-medium text-gray-700">
+            Station *
           </label>
           <select
-            name="currentStationId"
-            id="currentStationId"
-            value={formData.currentStationId}
+            name="stationId"
+            id="stationId"
+            value={formData.stationId}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            required
           >
             <option value="">Select a station</option>
-            {stations.map(station => (
+            {stations.map((station) => (
               <option key={station._id} value={station._id}>
-                {`${station.name} - ${station.location}`}
+                {station.name} - {station.address}
               </option>
             ))}
           </select>
@@ -295,10 +271,10 @@ const BusForm: React.FC<BusFormProps> = ({ bus, onSubmit, onCancel }) => {
             id="status"
             value={formData.status}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           >
-            <option value="INACTIVE">Inactive</option>
             <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
             <option value="MAINTENANCE">Maintenance</option>
           </select>
         </div>
@@ -313,8 +289,7 @@ const BusForm: React.FC<BusFormProps> = ({ bus, onSubmit, onCancel }) => {
             id="departureTime"
             value={formData.schedule.departureTime.slice(0, 16)}
             onChange={handleScheduleChange}
-            required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           />
         </div>
 
@@ -328,8 +303,7 @@ const BusForm: React.FC<BusFormProps> = ({ bus, onSubmit, onCancel }) => {
             id="arrivalTime"
             value={formData.schedule.arrivalTime.slice(0, 16)}
             onChange={handleScheduleChange}
-            required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           />
         </div>
       </div>
@@ -346,7 +320,7 @@ const BusForm: React.FC<BusFormProps> = ({ bus, onSubmit, onCancel }) => {
           type="submit"
           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
-          {bus ? 'Update Bus' : 'Add Bus'}
+          {bus ? 'Update' : 'Create'} Bus
         </button>
       </div>
     </form>

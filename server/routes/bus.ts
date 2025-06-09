@@ -9,7 +9,8 @@ import {
   assignDriver,
   calculateRoute,
   getBusTrackingInfo,
-  getBusLocations
+  getBusLocations,
+  getStationBuses
 } from '../controllers/busController';
 import { auth, checkRole } from '../middleware/auth';
 import { UserRole, Bus } from '../models';
@@ -29,6 +30,7 @@ router.post('/', checkRole([UserRole.MAIN_ADMIN]), createBus as RequestHandler);
 router.put('/:id', checkRole([UserRole.MAIN_ADMIN]), updateBus as RequestHandler);
 router.delete('/:id', checkRole([UserRole.MAIN_ADMIN]), deleteBus as RequestHandler);
 router.get('/', getBuses as RequestHandler);
+router.get('/station', getStationBuses as RequestHandler);
 router.get('/:id', getBusById as RequestHandler);
 
 // Routes for bus location updates (accessible by drivers)

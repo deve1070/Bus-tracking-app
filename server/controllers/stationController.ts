@@ -183,23 +183,24 @@ export const getStationStats = async (req: AuthRequest, res: Response) => {
 
     // Get total buses assigned to this station
     const totalBuses = await Bus.countDocuments({
-      currentStationId: stationId
+      stationId: stationId
     });
 
     // Get active buses
     const activeBuses = await Bus.countDocuments({
-      currentStationId: stationId,
+      stationId: stationId,
       status: 'ACTIVE'
     });
 
-    // Get current passengers (this is a placeholder - implement actual passenger counting logic)
-    const currentPassengers = 0;
-    const totalPassengers = 0;
+    // Get current passengers (sum of all buses' current passenger count)
+    const buses = await Bus.find({ stationId: stationId });
+    const currentPassengers = buses.reduce((sum, bus) => sum + (bus.currentPassengerCount || 0), 0);
+    const totalPassengers = currentPassengers; // This could be enhanced with historical data
 
     // Get next arrival (this is a placeholder - implement actual next arrival logic)
     const nextArrival = '';
 
-    // Get number of alerts (this is a placeholder - implement actual alert counting logic)
+    // Get number of alerts (this is a placeholder - implement actual alert logic)
     const alerts = 0;
 
     res.json({
@@ -211,10 +212,7 @@ export const getStationStats = async (req: AuthRequest, res: Response) => {
       alerts
     });
   } catch (error) {
-    console.error('Error getting station stats:', error);
-    res.status(400).json({ 
-      error: 'Failed to fetch station statistics',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    console.error('Error in getStationStats:', error);
+    res.status(500).json({ error: 'Failed to fetch station stats' });
   }
 }; 

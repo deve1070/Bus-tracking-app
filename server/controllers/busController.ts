@@ -1,12 +1,10 @@
 import { Request, Response } from 'express';
-import { Bus, Station, UserRole } from '../models';
+import { Bus, Station, UserRole, User } from '../models';
 import { IStation } from '../models/Station';
 import mongoose, { Types } from 'mongoose';
 import { OSRMService } from '../services/osrmService';
-
-interface AuthRequest extends Request {
-  user?: any;
-}
+import { IBus } from '../models/Bus';
+import { AuthRequest } from '../middleware/auth';
 
 interface StationDocument extends Omit<IStation, '_id'> {
   _id: Types.ObjectId;
@@ -17,33 +15,107 @@ interface MongoError extends Error {
   keyPattern?: Record<string, number>;
 }
 
+interface StationInRoute {
+  stationId: Types.ObjectId;
+  name: string;
+  location: {
+    type: string;
+    coordinates: [number, number];
+  };
+}
+
+interface PopulatedBus extends Omit<IBus, 'currentStationId' | 'driverId'> {
+  currentStationId?: {
+    _id: Types.ObjectId;
+    name: string;
+    location: {
+      type: string;
+      coordinates: [number, number];
+    };
+    address: string;
+  };
+  driverId?: {
+    _id: Types.ObjectId;
+    firstName: string;
+    lastName: string;
+  };
+}
+
 export const createBus = async (req: Request, res: Response) => {
   try {
-    const { currentStationId, ...busData } = req.body;
-    
-    // Create the bus first
-    const bus = new Bus({
-      ...busData,
-      currentStationId: currentStationId || undefined
+    const {
+      busNumber,
+      routeNumber,
+      capacity,
+      deviceId,
+      stationId,
+      status,
+      schedule
+    } = req.body;
+
+    // Validate required fields
+    if (!busNumber || !routeNumber || !capacity || !deviceId || !stationId) {
+      return res.status(400).json({ message: 'All required fields must be provided' });
+    }
+
+    // Check if bus number or device ID already exists
+    const existingBus = await Bus.findOne({
+      $or: [{ busNumber }, { deviceId }]
     });
-    await bus.save();
 
-    // If a station is assigned, update the station's buses array
-    if (currentStationId) {
-      await Station.findByIdAndUpdate(
-        currentStationId,
-        { $addToSet: { buses: bus._id } }
-      );
+    if (existingBus) {
+      return res.status(400).json({
+        message: existingBus.busNumber === busNumber
+          ? 'Bus number already exists'
+          : 'Device ID already exists'
+      });
     }
 
-    res.status(201).json(bus);
-  } catch (error: any) {
+    // Get the station to use its location
+    const station = await Station.findById(stationId);
+    if (!station) {
+      return res.status(400).json({ message: 'Station not found' });
+    }
+
+    // Create new bus with initial location at the station
+    const newBus = new Bus({
+      busNumber,
+      routeNumber,
+      capacity,
+      deviceId,
+      stationId,
+      status: status || 'INACTIVE',
+      currentLocation: station.location,
+      currentStationId: stationId,
+      route: {
+        stations: [{
+          stationId: station._id,
+          name: station.name,
+          location: station.location
+        }],
+        estimatedTime: 0
+      },
+      schedule: schedule || {
+        departureTime: new Date(),
+        arrivalTime: new Date()
+      },
+      currentPassengerCount: 0,
+      trackingData: {
+        speed: 0,
+        heading: 0,
+        lastUpdate: new Date()
+      }
+    });
+
+    await newBus.save();
+
+    res.status(201).json({
+      message: 'Bus created successfully',
+      bus: newBus
+    });
+  } catch (error) {
     console.error('Error creating bus:', error);
-    if (error.code === 11000) {
-      res.status(400).json({ message: 'Bus number already exists' });
-    } else {
-      res.status(500).json({ message: 'Error creating bus', error: error.message });
-    }
+    res.status(500).json({ message: 'Error creating bus' });
   }
 };
 
@@ -166,7 +238,7 @@ export const updateBusLocation = async (req: AuthRequest, res: Response) => {
 
     // Get current and next stations
     const currentStationIndex = bus.route?.stations.findIndex(
-      (station: Types.ObjectId) => station.toString() === bus.currentStationId?.toString()
+      (station: any) => station.stationId.toString() === bus.currentStationId?.toString()
     ) ?? -1;
     const nextStationId = currentStationIndex >= 0 ? bus.route?.stations[currentStationIndex + 1] : undefined;
 
@@ -360,18 +432,15 @@ export const assignDriver = async (req: AuthRequest, res: Response) => {
 
 export const getBusLocations = async (req: AuthRequest, res: Response) => {
   try {
-    const stationId = req.user.stationId;
-    if (!stationId) {
-      return res.status(403).json({ error: 'Not authorized to access bus locations' });
+    if (!req.user?.stationId) {
+      return res.status(403).json({ message: 'User is not associated with any station' });
     }
 
-    // Find all buses assigned to this station
-    const buses = await Bus.find({
-      'route.stations': stationId,
-      status: { $in: ['ACTIVE', 'INACTIVE'] }
-    }).select('deviceId currentLocation status trackingData lastUpdateTime busNumber routeNumber');
+    const buses = await Bus.find({ stationId: req.user.stationId })
+      .select('deviceId busNumber routeNumber currentLocation trackingData status lastUpdateTime')
+      .lean();
 
-    const locations = buses.map(bus => ({
+    const busLocations = buses.map(bus => ({
       deviceId: bus.deviceId,
       busNumber: bus.busNumber,
       routeNumber: bus.routeNumber,
@@ -381,67 +450,96 @@ export const getBusLocations = async (req: AuthRequest, res: Response) => {
       },
       speed: bus.trackingData?.speed || 0,
       heading: bus.trackingData?.heading || 0,
-      status: bus.status.toLowerCase(),
+      status: bus.status,
       lastUpdate: bus.lastUpdateTime
     }));
 
-    res.json(locations);
+    res.json(busLocations);
   } catch (error) {
-    console.error('Error getting bus locations:', error);
-    res.status(500).json({ error: 'Failed to fetch bus locations' });
+    console.error('Error fetching bus locations:', error);
+    res.status(500).json({ message: 'Error fetching bus locations' });
   }
 };
 
 export const getStationBuses = async (req: AuthRequest, res: Response) => {
   try {
-    console.log('Getting station buses for user:', {
-      userId: req.user?._id,
-      role: req.user?.role,
-      stationId: req.user?.stationId,
-      user: req.user
-    });
+    const userId = req.user?._id;
+    const stationId = req.user?.stationId;
 
-    if (!req.user) {
-      console.log('No user found in request');
-      return res.status(401).json({ 
-        error: 'Authentication required',
-        details: 'No user found in request'
-      });
-    }
-
-    if (req.user.role !== UserRole.STATION_ADMIN) {
-      console.log('User is not a station admin:', req.user.role);
-      return res.status(403).json({ 
-        error: 'Access denied',
-        details: 'Only station admins can access this endpoint'
-      });
-    }
-
-    const stationId = req.user.stationId;
-    if (!stationId) {
-      console.log('No stationId found for user');
-      return res.status(403).json({ 
-        error: 'Not authorized to access station buses',
-        details: 'User is not associated with any station'
-      });
-    }
-
-    console.log('Finding buses for station:', stationId);
+    console.log('User ID:', userId);
     console.log('Station ID:', stationId);
-    const buses = await Bus.find({
-      currentStationId: stationId
-    })
-    .populate('driverId', 'firstName lastName')
-    .populate('currentStationId', 'name location address')
-    .populate('route.stations', 'name location');
 
-    console.log('Found buses:', buses.length);
-    res.json(buses);
-  } catch (error) {
-    console.error('Error getting station buses:', error);
-    res.status(400).json({ 
-      error: 'Failed to fetch station buses',
-      details: error instanceof Error ? error.message : 'Unknown error'
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    if (!stationId) {
+      return res.status(403).json({ message: 'User is not associated with any station' });
+    }
+
+    // Find all buses assigned to the user's station
+    const buses = await Bus.find({ stationId })
+      .populate('driverId', 'firstName lastName')
+      .populate('currentStationId', 'name location address')
+      .lean();
+
+    console.log('Found buses:', buses);
+
+    // Transform the data to include current station name
+    const transformedBuses = buses.map((bus: any) => {
+      const currentStationId = bus.currentStationId?._id?.toString();
+      const currentStation = currentStationId ? 
+        bus.route.stations.find((station: any) => station.stationId.toString() === currentStationId)
+        : null;
+
+      return {
+        ...bus,
+        currentStationName: currentStation?.name || 'Not at station'
+      };
     });
+
+    console.log('Transformed buses:', transformedBuses);
+
+    res.json(transformedBuses);
+  } catch (error) {
+    console.error('Error fetching station buses:', error);
+    res.status(500).json({ message: 'Error fetching station buses' });
+  }
+};
+
+export const updateBusStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Get the user's station
+    const user = await User.findById(userId);
+    if (!user || !user.stationId) {
+      return res.status(403).json({ message: 'User is not associated with any station' });
+    }
+
+    // Find the bus and verify it belongs to the user's station
+    const bus = await Bus.findById(id);
+    if (!bus) {
+      return res.status(404).json({ message: 'Bus not found' });
+    }
+
+    if (bus.stationId.toString() !== user.stationId.toString()) {
+      return res.status(403).json({ message: 'Bus does not belong to your station' });
+    }
+
+    // Update the bus status
+    bus.status = status;
+    await bus.save();
+
+    res.json({ message: 'Bus status updated successfully', bus });
+  } catch (error) {
+    console.error('Error updating bus status:', error);
+    res.status(500).json({ message: 'Error updating bus status' });
   }
 }; 

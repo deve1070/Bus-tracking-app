@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Bus, RefreshCw } from 'lucide-react';
+import { Bus, RefreshCw, Clock, Users, MapPin } from 'lucide-react';
 import api from '../../../services/api';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -38,6 +38,12 @@ interface StationBus {
     departureTime: string;
     arrivalTime: string;
   };
+  currentPassengerCount: number;
+  trackingData?: {
+    speed: number;
+    heading: number;
+    lastUpdate: Date;
+  };
 }
 
 const StationBusManagement: React.FC = () => {
@@ -51,7 +57,6 @@ const StationBusManagement: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    console.log('User in StationBusManagement:', user);
     if (!user) {
       setLoading(false);
       setError('User not loaded');
@@ -87,6 +92,17 @@ const StationBusManagement: React.FC = () => {
     fetchStationBuses();
   };
 
+  const handleStatusUpdate = async (busId: string, newStatus: string) => {
+    try {
+      await api.put(`/buses/${busId}/status`, { status: newStatus });
+      toast.success('Bus status updated successfully');
+      fetchStationBuses();
+    } catch (error: any) {
+      console.error('Error updating bus status:', error);
+      toast.error(error.response?.data?.message || 'Failed to update bus status');
+    }
+  };
+
   const handleUpdate = (busId: string) => {
     navigate(`/station-admin/buses/update/${busId}`);
   };
@@ -110,13 +126,13 @@ const StationBusManagement: React.FC = () => {
   if (error) {
     return (
       <div className="py-6">
-        <div className="bg-white shadow rounded-lg p-6">
-          <div className="text-center">
-            <Bus className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Error Loading Buses</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              {error}
-            </p>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
+          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div className="px-4 py-12 sm:px-6 text-center">
+              <Bus className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">Error</h3>
+              <p className="mt-1 text-sm text-gray-500">{error}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -137,7 +153,6 @@ const StationBusManagement: React.FC = () => {
           </button>
         </div>
 
-        {/* Search and Filters */}
         <div className="mb-6 flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
             <input
@@ -162,7 +177,6 @@ const StationBusManagement: React.FC = () => {
           </div>
         </div>
 
-        {/* Bus List */}
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <ul className="divide-y divide-gray-200">
             {filteredBuses.map((bus) => (
@@ -190,12 +204,35 @@ const StationBusManagement: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
-                      <button
-                        onClick={() => handleUpdate(bus._id)}
-                        className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        Update
-                      </button>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Users className="h-4 w-4 mr-1" />
+                        {bus.currentPassengerCount}/{bus.capacity}
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Clock className="h-4 w-4 mr-1" />
+                        {new Date(bus.schedule.departureTime).toLocaleTimeString()}
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        {bus.currentStationId?.name || 'Not at station'}
+                      </div>
+                      <div className="flex space-x-2">
+                        <select
+                          value={bus.status}
+                          onChange={(e) => handleStatusUpdate(bus._id, e.target.value as 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE')}
+                          className="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        >
+                          <option value="ACTIVE">Active</option>
+                          <option value="INACTIVE">Inactive</option>
+                          <option value="MAINTENANCE">Maintenance</option>
+                        </select>
+                        <button
+                          onClick={() => handleUpdate(bus._id)}
+                          className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          Details
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
