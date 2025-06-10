@@ -101,13 +101,33 @@ const UpdateBusForm: React.FC = () => {
       }
 
       // Validate schedule times
+      const departureTime = new Date(formData.schedule.departureTime);
+      const arrivalTime = new Date(formData.schedule.arrivalTime);
+      const now = new Date();
+
       console.log('Validating schedule times:', {
         departure: formData.schedule.departureTime,
-        arrival: formData.schedule.arrivalTime
+        arrival: formData.schedule.arrivalTime,
+        now: now.toISOString()
       });
 
-      if (new Date(formData.schedule.departureTime) >= new Date(formData.schedule.arrivalTime)) {
+      // Check if departure time is in the future
+      if (departureTime <= now) {
+        setError('Departure time must be in the future');
+        return;
+      }
+
+      // Check if arrival time is after departure time
+      if (departureTime >= arrivalTime) {
         setError('Arrival time must be after departure time');
+        return;
+      }
+
+      // Check if the time difference is reasonable (e.g., not more than 24 hours)
+      const timeDiff = arrivalTime.getTime() - departureTime.getTime();
+      const maxTimeDiff = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+      if (timeDiff > maxTimeDiff) {
+        setError('The time between departure and arrival cannot exceed 24 hours');
         return;
       }
 
@@ -180,6 +200,21 @@ const UpdateBusForm: React.FC = () => {
           </div>
         </div>
 
+        {error && (
+          <div className="mt-4 bg-red-50 border-l-4 border-red-400 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div className="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
             <div className="md:grid md:grid-cols-3 md:gap-6">
@@ -214,12 +249,15 @@ const UpdateBusForm: React.FC = () => {
                     </label>
                     <input
                       type="datetime-local"
-                      name="departureTime"
                       id="departureTime"
-                      value={formData.schedule?.departureTime?.slice(0, 16) || ''}
+                      name="departureTime"
+                      value={formData.schedule?.departureTime}
                       onChange={handleScheduleChange}
                       className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     />
+                    <p className="mt-1 text-sm text-gray-500">
+                      Must be in the future
+                    </p>
                   </div>
 
                   <div className="col-span-6 sm:col-span-3">
@@ -228,19 +266,22 @@ const UpdateBusForm: React.FC = () => {
                     </label>
                     <input
                       type="datetime-local"
-                      name="arrivalTime"
                       id="arrivalTime"
-                      value={formData.schedule?.arrivalTime?.slice(0, 16) || ''}
+                      name="arrivalTime"
+                      value={formData.schedule?.arrivalTime}
                       onChange={handleScheduleChange}
                       className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     />
+                    <p className="mt-1 text-sm text-gray-500">
+                      Must be after departure time
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end">
             <button
               type="button"
               onClick={() => navigate('/station-admin/buses')}
@@ -250,7 +291,7 @@ const UpdateBusForm: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Update Bus
             </button>
