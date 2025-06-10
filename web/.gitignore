@@ -1,23 +1,51 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# production
-/build
-
-# misc
-.DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.pnp/
+.pnp.js
+
+# testing
+coverage/
+
+# production
+dist/
+build/
+*.tsbuildinfo
+
+# misc
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# logs
+logs/
+*.log
+
+# environment variables
+.env
+.env.local
+.env.*.local
+
+# temporary files
+tmp/
+temp/
+.tmp/
+.temp/
+
+# project specific
+public/uploads/
+src/assets/uploads/
+.cache/
+.eslintcache
+
+# vite
+*.local
+
+# OS specific
+Thumbs.db

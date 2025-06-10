@@ -2,6 +2,7 @@ import express, { Request, Response, RequestHandler } from 'express';
 import { Bus } from '../models';
 import { authenticateToken } from '../middleware/auth';
 import { AuthRequest } from '../middleware/auth';
+import { io } from '../app';
 
 const router = express.Router();
 
@@ -38,6 +39,22 @@ const registerBus = async (req: Request, res: Response) => {
     });
 
     await bus.save();
+    
+    // Emit initial bus location
+    io.emit('busLocationUpdate', [{
+      deviceId: bus.deviceId,
+      busNumber: bus.busNumber,
+      routeNumber: bus.routeNumber,
+      location: {
+        lat: bus.currentLocation.coordinates[1],
+        lng: bus.currentLocation.coordinates[0]
+      },
+      speed: bus.trackingData?.speed || 0,
+      heading: bus.trackingData?.heading || 0,
+      status: bus.status,
+      lastUpdate: bus.lastUpdateTime
+    }]);
+
     res.status(201).json(bus);
   } catch (error) {
     console.error('Error registering simulated bus:', error);
@@ -73,6 +90,21 @@ const updateBusLocation = async (req: Request, res: Response) => {
       res.status(404).json({ error: 'Bus not found' });
       return;
     }
+
+    // Emit the update to all connected clients
+    io.emit('busLocationUpdate', [{
+      deviceId: bus.deviceId,
+      busNumber: bus.busNumber,
+      routeNumber: bus.routeNumber,
+      location: {
+        lat: bus.currentLocation.coordinates[1],
+        lng: bus.currentLocation.coordinates[0]
+      },
+      speed: bus.trackingData?.speed || 0,
+      heading: bus.trackingData?.heading || 0,
+      status: bus.status,
+      lastUpdate: bus.lastUpdateTime
+    }]);
 
     res.json(bus);
   } catch (error) {

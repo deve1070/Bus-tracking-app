@@ -1,5 +1,5 @@
 // API Configuration
-const DEV_API_URL = 'http://192.168.27.10:3000'; // Your current network IP
+const DEV_API_URL = 'http://192.168.16.237:3000'; // Your current network IP
 const LOCAL_API_URL = 'http://localhost:3000';
 const PROD_API_URL = 'https://your-production-api.com';
 

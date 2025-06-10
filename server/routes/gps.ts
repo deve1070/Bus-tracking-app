@@ -37,8 +37,8 @@ router.post('/update', (async (req, res) => {
           coordinates: [location.longitude, location.latitude]
         },
         trackingData: {
-          speed,
-          heading,
+          speed: speed || 0,
+          heading: heading || 0,
           lastUpdate: new Date()
         },
         status: status.toUpperCase(),
@@ -52,7 +52,7 @@ router.post('/update', (async (req, res) => {
     }
 
     // Emit the update to all connected clients
-    io.emit('gps-update', {
+    io.emit('busLocationUpdate', [{
       deviceId: updatedBus.deviceId,
       busNumber: updatedBus.busNumber,
       routeNumber: updatedBus.routeNumber,
@@ -64,7 +64,7 @@ router.post('/update', (async (req, res) => {
       heading: updatedBus.trackingData?.heading || 0,
       status: updatedBus.status,
       lastUpdate: updatedBus.lastUpdateTime
-    });
+    }]);
 
     res.json({ success: true, bus: updatedBus });
   } catch (error) {

@@ -106,12 +106,12 @@ export default function Simulator() {
             busNumber: bus.busNumber,
             routeNumber: bus.routeNumber,
             location: {
-              lat: newLocation.coords.latitude,
-              lng: newLocation.coords.longitude,
+              latitude: newLocation.coords.latitude,
+              longitude: newLocation.coords.longitude,
             },
             speed: newLocation.coords.speed || 0,
             heading: newLocation.coords.heading || 0,
-            status: 'active',
+            status: 'ACTIVE',
             lastUpdate: new Date().toISOString(),
           });
         }
