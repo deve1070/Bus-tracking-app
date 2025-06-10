@@ -49,7 +49,7 @@ export const authService = {
       });
       
       console.log('Login response received:', response.data);
-      return response.data;
+    return response.data;
     } catch (error: any) {
       console.error('Login request failed:', error.response?.data || error.message);
       throw error;
@@ -58,8 +58,8 @@ export const authService = {
 
   register: async (userData: RegisterData): Promise<AuthResponse> => {
     try {
-      const response = await api.post<AuthResponse>('/auth/register', userData);
-      return response.data;
+    const response = await api.post<AuthResponse>('/auth/register', userData);
+    return response.data;
     } catch (error: any) {
       console.error('Registration request failed:', error.response?.data || error.message);
       throw error;
@@ -68,19 +68,19 @@ export const authService = {
 
   logout: async (): Promise<void> => {
     try {
-      await api.post('/auth/logout');
+    await api.post('/auth/logout');
     } catch (error) {
       console.error('Logout request failed:', error);
     } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     }
   },
 
   getProfile: async (): Promise<User> => {
     try {
-      const response = await api.get<User>('/auth/profile');
-      return response.data;
+    const response = await api.get<User>('/auth/profile');
+    return response.data;
     } catch (error: any) {
       console.error('Get profile request failed:', error.response?.data || error.message);
       throw error;
@@ -89,7 +89,7 @@ export const authService = {
 
   changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
     try {
-      await api.post('/auth/change-password', { currentPassword, newPassword });
+    await api.post('/auth/change-password', { currentPassword, newPassword });
     } catch (error: any) {
       console.error('Change password request failed:', error.response?.data || error.message);
       throw error;
@@ -98,8 +98,8 @@ export const authService = {
 
   refreshToken: async (): Promise<{ token: string }> => {
     try {
-      const response = await api.post<{ token: string }>('/auth/refresh-token');
-      return response.data;
+    const response = await api.post<{ token: string }>('/auth/refresh-token');
+    return response.data;
     } catch (error: any) {
       console.error('Token refresh request failed:', error.response?.data || error.message);
       throw error;
@@ -108,8 +108,8 @@ export const authService = {
 
   getCurrentUser: (): User | null => {
     try {
-      const userStr = localStorage.getItem('user');
-      return userStr ? JSON.parse(userStr) : null;
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
       console.error('Error parsing user from localStorage:', error);
       return null;
@@ -118,8 +118,8 @@ export const authService = {
 
   setAuthData: (data: AuthResponse) => {
     try {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
     } catch (error) {
       console.error('Error saving auth data to localStorage:', error);
     }

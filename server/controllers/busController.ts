@@ -119,51 +119,128 @@ export const createBus = async (req: Request, res: Response) => {
   }
 };
 
-export const updateBus = async (req: Request, res: Response) => {
+export const updateBus = async (req: AuthRequest, res: Response) => {
   try {
-    const { currentStationId, ...updateData } = req.body;
     const busId = req.params.id;
-
-    // Get the current bus to check if it was assigned to a station
-    const currentBus = await Bus.findById(busId);
-    if (!currentBus) {
-      return res.status(404).json({ message: 'Bus not found' });
-    }
-
-    // If the bus was previously assigned to a station, remove it from that station
-    if (currentBus.currentStationId) {
-      await Station.findByIdAndUpdate(
-        currentBus.currentStationId,
-        { $pull: { buses: busId } }
-      );
-    }
-
-    // Update the bus with new data
-    const updatedBus = await Bus.findByIdAndUpdate(
+    console.log('Update Bus Request:', {
       busId,
-      { 
-        ...updateData,
-        currentStationId: currentStationId || undefined
-      },
-      { new: true }
-    );
+      body: req.body,
+      user: req.user ? {
+        id: req.user._id,
+        role: req.user.role,
+        stationId: req.user.stationId
+      } : 'No user'
+    });
 
-    // If a new station is assigned, add the bus to that station
-    if (currentStationId) {
-      await Station.findByIdAndUpdate(
-        currentStationId,
-        { $addToSet: { buses: busId } }
-      );
+    if (!busId) {
+      return res.status(400).json({ error: 'Bus ID is required' });
     }
 
-    res.json(updatedBus);
-  } catch (error: any) {
+    const bus = await Bus.findById(busId);
+    if (!bus) {
+      console.log('Bus not found:', busId);
+      return res.status(404).json({ error: 'Bus not found' });
+    }
+
+    // Check if user has permission to update this bus
+    if (req.user?.role === UserRole.STATION_ADMIN) {
+      // Extract the station ID from the user's station object
+      const userStationId = req.user.stationId?._id?.toString();
+      const busStationId = bus.stationId?.toString();
+      const requestStationId = req.body.stationId?.toString();
+      
+      console.log('Checking station access:', {
+        userStationId,
+        busStationId,
+        requestStationId,
+        match: userStationId === busStationId,
+        requestMatch: userStationId === requestStationId,
+        userRole: req.user.role,
+        user: {
+          id: req.user._id,
+          role: req.user.role,
+          stationId: req.user.stationId
+        }
+      });
+
+      // Check if user has a station assigned
+      if (!userStationId) {
+        console.log('User has no station assigned');
+        return res.status(403).json({ 
+          error: 'You do not have a station assigned',
+          details: {
+            userStationId,
+            busStationId,
+            requestStationId
+          }
+        });
+      }
+
+      // Check if bus has a station assigned
+      if (!busStationId) {
+        console.log('Bus has no station assigned');
+        return res.status(403).json({ 
+          error: 'This bus is not assigned to any station',
+          details: {
+            userStationId,
+            busStationId,
+            requestStationId
+          }
+        });
+      }
+
+      // Check if station IDs match
+      if (userStationId !== busStationId) {
+        console.log('Station IDs do not match');
+        return res.status(403).json({ 
+          error: 'You can only update buses assigned to your station',
+          details: {
+            userStationId,
+            busStationId,
+            requestStationId
+          }
+        });
+      }
+    }
+
+    // Update bus fields
+    const updateData = req.body;
+    
+    // Convert string stationId to ObjectId if present
+    if (updateData.stationId && typeof updateData.stationId === 'string') {
+      updateData.stationId = new Types.ObjectId(updateData.stationId);
+    }
+    
+    // Convert string currentStationId to ObjectId if present
+    if (updateData.currentStationId && typeof updateData.currentStationId === 'string') {
+      updateData.currentStationId = new Types.ObjectId(updateData.currentStationId);
+    }
+
+    // Update only the fields that are present in the request
+    const allowedFields = [
+      'status',
+      'schedule',
+      'currentStationId',
+      'stationId',
+      'currentLocation',
+      'trackingData',
+      'isOnRoute',
+      'currentPassengerCount'
+    ] as const;
+
+    for (const field of allowedFields) {
+      if (field in updateData) {
+        (bus as any)[field] = updateData[field];
+      }
+    }
+
+    await bus.save();
+    console.log('Bus updated successfully:', bus);
+
+    res.json(bus);
+  } catch (error) {
     console.error('Error updating bus:', error);
-    if (error.code === 11000) {
-      res.status(400).json({ message: 'Bus number already exists' });
-    } else {
-      res.status(500).json({ message: 'Error updating bus', error: error.message });
-    }
+    res.status(500).json({ error: 'Failed to update bus' });
   }
 };
 
@@ -463,27 +540,36 @@ export const getBusLocations = async (req: AuthRequest, res: Response) => {
 
 export const getStationBuses = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?._id;
-    const stationId = req.user?.stationId;
+    const user = req.user;
+    console.log('Getting station buses for user:', {
+      userId: user?._id,
+      userRole: user?.role,
+      userStationId: user?.stationId
+    });
 
-    console.log('User ID:', userId);
-    console.log('Station ID:', stationId);
-
-    if (!userId) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    if (!stationId) {
-      return res.status(403).json({ message: 'User is not associated with any station' });
+    if (!user || !user.stationId) {
+      console.log('User not found or no station assigned');
+      return res.status(403).json({ message: 'No station assigned to this user' });
     }
 
     // Find all buses assigned to the user's station
-    const buses = await Bus.find({ stationId })
+    const buses = await Bus.find({ stationId: user.stationId })
       .populate('driverId', 'firstName lastName')
-      .populate('currentStationId', 'name location address')
-      .lean();
+      .populate({
+        path: 'currentStationId',
+        select: 'name location address'
+      });
 
-    console.log('Found buses:', buses);
+    console.log('Found buses for station:', {
+      stationId: user.stationId,
+      busCount: buses.length,
+      buses: buses.map(b => ({
+        id: b._id,
+        busNumber: b.busNumber,
+        stationId: b.stationId,
+        status: b.status
+      }))
+    });
 
     // Transform the data to include current station name
     const transformedBuses = buses.map((bus: any) => {
@@ -493,12 +579,10 @@ export const getStationBuses = async (req: AuthRequest, res: Response) => {
         : null;
 
       return {
-        ...bus,
+        ...bus.toObject(),
         currentStationName: currentStation?.name || 'Not at station'
       };
     });
-
-    console.log('Transformed buses:', transformedBuses);
 
     res.json(transformedBuses);
   } catch (error) {

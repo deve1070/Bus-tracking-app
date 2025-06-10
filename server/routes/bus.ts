@@ -12,7 +12,7 @@ import {
   getBusLocations,
   getStationBuses
 } from '../controllers/busController';
-import { auth, checkRole } from '../middleware/auth';
+import { authenticateToken, checkRole } from '../middleware/auth';
 import { UserRole, Bus } from '../models';
 
 const router = express.Router();
@@ -20,26 +20,12 @@ const router = express.Router();
 // Public routes (no authentication required)
 router.get('/locations', getBusLocations as RequestHandler);
 router.get('/route/:startStationId/:endStationId', calculateRoute as RequestHandler);
-router.get('/:id/tracking', getBusTrackingInfo as RequestHandler);
 
 // Protected routes (require authentication)
-router.use(auth);
+router.use(authenticateToken);
 
-// Routes accessible by main admin and station admin
-router.post('/', checkRole([UserRole.MAIN_ADMIN]), createBus as RequestHandler);
-router.put('/:id', checkRole([UserRole.MAIN_ADMIN]), updateBus as RequestHandler);
-router.delete('/:id', checkRole([UserRole.MAIN_ADMIN]), deleteBus as RequestHandler);
-router.get('/', getBuses as RequestHandler);
+// Specific routes first
 router.get('/station', getStationBuses as RequestHandler);
-router.get('/:id', getBusById as RequestHandler);
-
-// Routes for bus location updates (accessible by drivers)
-router.post('/:id/location', checkRole([UserRole.DRIVER]), updateBusLocation as RequestHandler);
-
-// Route for assigning drivers (main admin only)
-router.post('/:id/assign-driver', checkRole([UserRole.MAIN_ADMIN]), assignDriver as RequestHandler);
-
-// List all registered buses
 router.get('/list', (async (req, res) => {
   try {
     const buses = await Bus.find({}, {
@@ -55,6 +41,18 @@ router.get('/list', (async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch buses' });
   }
 }) as RequestHandler);
+
+// Bus-specific routes
+router.get('/:id/tracking', getBusTrackingInfo as RequestHandler);
+router.post('/:id/location', checkRole([UserRole.DRIVER]), updateBusLocation as RequestHandler);
+router.post('/:id/assign-driver', checkRole([UserRole.MAIN_ADMIN]), assignDriver as RequestHandler);
+
+// Generic routes last
+router.post('/', checkRole([UserRole.MAIN_ADMIN]), createBus as RequestHandler);
+router.put('/:id', checkRole([UserRole.MAIN_ADMIN, UserRole.STATION_ADMIN]), updateBus as RequestHandler);
+router.delete('/:id', checkRole([UserRole.MAIN_ADMIN]), deleteBus as RequestHandler);
+router.get('/', getBuses as RequestHandler);
+router.get('/:id', getBusById as RequestHandler);
 
 // Register a new bus
 router.post('/register', (async (req, res) => {

@@ -102,16 +102,33 @@ export const authorize = (...roles: UserRole[]) => {
 export const checkRole = (roles: UserRole[]) => {
     return async (req: AuthRequest, res: Response, next: NextFunction) => {
         try {
+            console.log('Checking role:', {
+                user: req.user ? {
+                    id: req.user._id,
+                    role: req.user.role,
+                    stationId: req.user.stationId
+                } : 'No user',
+                requiredRoles: roles,
+                path: req.path
+            });
+
             if (!req.user) {
+                console.log('No user found in request');
                 throw new Error('User not authenticated');
             }
 
             if (!roles.includes(req.user.role)) {
+                console.log('User role not authorized:', {
+                    userRole: req.user.role,
+                    requiredRoles: roles
+                });
                 throw new Error('Insufficient permissions');
             }
 
+            console.log('Role check passed');
             next();
         } catch (error) {
+            console.error('Role check failed:', error);
             res.status(403).json({ error: 'Access denied.' });
         }
     };

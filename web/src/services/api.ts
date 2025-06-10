@@ -9,17 +9,29 @@ const api = axios.create({
   }
 });
 
-// Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  console.log('Making request with token:', token ? 'Token present' : 'No token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Request interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    console.log('Making request with token:', token ? 'Token present' : 'No token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    console.log('Request config:', {
+      method: config.method,
+      url: config.url,
+      data: config.data,
+      headers: config.headers
+    });
+    return config;
+  },
+  (error) => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
-// Handle token refresh and errors
+// Response interceptor
 api.interceptors.response.use(
   (response) => {
     console.log('Response received:', {
@@ -29,40 +41,13 @@ api.interceptors.response.use(
     });
     return response;
   },
-  async (error) => {
+  (error) => {
     console.error('API Error:', {
       status: error.response?.status,
       url: error.config?.url,
       method: error.config?.method,
       data: error.response?.data
     });
-
-    const originalRequest = error.config;
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const response = await axios.post(`${API_BASE_URL}/auth/refresh-token`, null, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('refreshToken')}`
-          }
-        });
-
-        const { token } = response.data;
-        localStorage.setItem('token', token);
-
-        originalRequest.headers.Authorization = `Bearer ${token}`;
-        return api(originalRequest);
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      }
-    }
-
     return Promise.reject(error);
   }
 );

@@ -3,44 +3,39 @@ import { authenticateToken, checkRole } from '../middleware/auth';
 import { UserRole } from '../models/User';
 import {
   createBus,
-  updateBus,
-  deleteBus,
   getBuses,
   getBusById,
-  updateBusLocation,
+  updateBus,
+  deleteBus,
   getBusTrackingInfo,
   calculateRoute,
-  assignDriver,
-  getBusLocations,
-  getStationBuses,
-  updateBusStatus
+  getStationBuses
 } from '../controllers/busController';
 
 const router = express.Router();
 
-// All routes require authentication
-router.use(authenticateToken);
+// Create a new bus (admin only)
+router.post('/', authenticateToken, checkRole([UserRole.MAIN_ADMIN]), createBus as RequestHandler);
 
-// Public routes
-router.get('/', getBuses as RequestHandler);
-router.get('/:id', getBusById as RequestHandler);
+// Get all buses
+router.get('/', authenticateToken, getBuses as RequestHandler);
 
-// Station admin routes
-router.get('/station', checkRole([UserRole.STATION_ADMIN]), getStationBuses as RequestHandler);
-router.put('/:id/status', checkRole([UserRole.STATION_ADMIN]), updateBusStatus as RequestHandler);
+// Get station buses (for station admin)
+router.get('/station', authenticateToken, checkRole([UserRole.STATION_ADMIN]), getStationBuses as RequestHandler);
 
-// Main admin routes
-router.post('/', checkRole([UserRole.MAIN_ADMIN]), createBus as RequestHandler);
-router.put('/:id', checkRole([UserRole.MAIN_ADMIN]), updateBus as RequestHandler);
-router.delete('/:id', checkRole([UserRole.MAIN_ADMIN]), deleteBus as RequestHandler);
-router.post('/:id/assign-driver', checkRole([UserRole.MAIN_ADMIN]), assignDriver as RequestHandler);
+// Get a specific bus
+router.get('/:id', authenticateToken, getBusById as RequestHandler);
 
-// Driver routes
-router.put('/:id/location', checkRole([UserRole.DRIVER]), updateBusLocation as RequestHandler);
+// Update a bus (admin or station admin)
+router.put('/:busId', authenticateToken, checkRole([UserRole.MAIN_ADMIN, UserRole.STATION_ADMIN]), updateBus as RequestHandler);
 
-// Common routes
-router.get('/locations', checkRole([UserRole.STATION_ADMIN]), getBusLocations as RequestHandler);
+// Delete a bus (admin only)
+router.delete('/:id', authenticateToken, checkRole([UserRole.MAIN_ADMIN]), deleteBus as RequestHandler);
+
+// Get bus tracking info
 router.get('/:id/tracking', getBusTrackingInfo as RequestHandler);
+
+// Calculate route between stations
 router.get('/route/:startStationId/:endStationId', calculateRoute as RequestHandler);
 
 export default router; 

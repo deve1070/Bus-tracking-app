@@ -22,6 +22,7 @@ import StationBusManagement from '../pages/station-admin/buses/StationBusManagem
 import UpdateBus from '../pages/station-admin/buses/UpdateBus';
 import StationNotifications from '../pages/station-admin/notifications/StationNotifications';
 import StationMonitoring from '../pages/station-admin/monitoring/RealTimeMonitoring';
+import UpdateBusForm from '../pages/station-admin/buses/UpdateBusForm';
 
 const AppRoutes = () => {
   const { isAuthenticated, user, loading } = useAuth();
@@ -62,6 +63,7 @@ const AppRoutes = () => {
           <Route index element={<StationDashboard />} />
           <Route path="buses" element={<StationBusManagement />} />
           <Route path="buses/update/:id" element={<UpdateBus />} />
+          <Route path="buses/:busId/edit" element={<UpdateBusForm />} />
           <Route path="monitoring" element={<StationMonitoring />} />
           <Route path="notifications" element={<StationNotifications />} />
         </Route>

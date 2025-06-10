@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Bus, RefreshCw, Clock, Users, MapPin } from 'lucide-react';
+import { Bus, RefreshCw, Clock, Users, MapPin, Edit } from 'lucide-react';
 import api from '../../../services/api';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -43,6 +43,10 @@ interface StationBus {
     speed: number;
     heading: number;
     lastUpdate: Date;
+  };
+  currentLocation: {
+    type: string;
+    coordinates: [number, number];
   };
 }
 
@@ -107,6 +111,10 @@ const StationBusManagement: React.FC = () => {
     navigate(`/station-admin/buses/update/${busId}`);
   };
 
+  const handleEdit = (busId: string) => {
+    navigate(`/station-admin/buses/${busId}/edit`);
+  };
+
   const filteredBuses = buses.filter(bus => {
     const matchesSearch = bus.busNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         bus.routeNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,6 +122,19 @@ const StationBusManagement: React.FC = () => {
     const matchesStatus = !statusFilter || bus.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+        return 'bg-green-100 text-green-800';
+      case 'INACTIVE':
+        return 'bg-gray-100 text-gray-800';
+      case 'MAINTENANCE':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   if (loading) {
     return (
@@ -193,11 +214,7 @@ const StationBusManagement: React.FC = () => {
                         <div className="text-sm font-medium text-indigo-600">Bus #{bus.busNumber}</div>
                         <div className="text-sm text-gray-500">Route: {bus.routeNumber}</div>
                         <div className="text-sm text-gray-500">
-                          Status: <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            bus.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
-                            bus.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
+                          Status: <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(bus.status)}`}>
                             {bus.status}
                           </span>
                         </div>
@@ -231,6 +248,12 @@ const StationBusManagement: React.FC = () => {
                           className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         >
                           Details
+                        </button>
+                        <button
+                          onClick={() => handleEdit(bus._id)}
+                          className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          <Edit className="h-4 w-4" />
                         </button>
                       </div>
                     </div>

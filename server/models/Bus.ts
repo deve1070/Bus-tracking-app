@@ -93,7 +93,7 @@ const busSchema = new Schema<IBus>({
   route: {
     stations: [{
       stationId: {
-        type: Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
         ref: 'Station',
         required: true
       },
