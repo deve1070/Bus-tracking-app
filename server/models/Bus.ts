@@ -93,7 +93,7 @@ const busSchema = new Schema<IBus>({
   route: {
     stations: [{
       stationId: {
-      type: Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: 'Station',
         required: true
       },
@@ -161,10 +161,6 @@ const busSchema = new Schema<IBus>({
 
 // Create geospatial index for location queries
 busSchema.index({ 'route.stations.location': '2dsphere' });
-
-// Create indexes
-busSchema.index({ busNumber: 1 });
-busSchema.index({ deviceId: 1 });
 busSchema.index({ currentLocation: '2dsphere' });
 
 export const Bus = mongoose.model<IBus>('Bus', busSchema); 

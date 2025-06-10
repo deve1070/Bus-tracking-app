@@ -219,6 +219,7 @@ export const updateBus = async (req: AuthRequest, res: Response) => {
     // Update only the fields that are present in the request
     const allowedFields = [
       'status',
+      'routeNumber',
       'schedule',
       'currentStationId',
       'stationId',

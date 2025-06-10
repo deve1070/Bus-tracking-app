@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import api from '../../../services/api';
 import { useAuth } from '../../../contexts/AuthContext';
+import { Station } from '../../../types/station';
 
 interface BusSchedule {
   departureTime: string;
@@ -56,35 +57,106 @@ interface Bus {
   __v?: number;
 }
 
+interface RouteStation {
+  stationId: string;
+  name: string;
+  location: {
+    type: string;
+    coordinates: [number, number];
+  };
+}
+
+interface FormData {
+  status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
+  routeNumber: string;
+  schedule: {
+    departureTime: string;
+    arrivalTime: string;
+  };
+  currentStationId?: Station;
+  stationId?: Station;
+  currentLocation: {
+    type: string;
+    coordinates: [number, number];
+  };
+  trackingData: {
+    speed: number;
+    heading: number;
+    lastUpdate: Date;
+  };
+  isOnRoute: boolean;
+  currentPassengerCount: number;
+}
+
 const UpdateBusForm: React.FC = () => {
   const navigate = useNavigate();
   const { busId } = useParams<{ busId: string }>();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState<Partial<Bus>>({
-    status: 'INACTIVE',
-    schedule: {
-      departureTime: new Date().toISOString(),
-      arrivalTime: new Date().toISOString()
-    }
-  });
+  const [stations, setStations] = useState<Station[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<FormData>({
+    status: 'INACTIVE',
+    routeNumber: '',
+    schedule: {
+      departureTime: '',
+      arrivalTime: ''
+    },
+    currentLocation: {
+      type: 'Point',
+      coordinates: [0, 0]
+    },
+    trackingData: {
+      speed: 0,
+      heading: 0,
+      lastUpdate: new Date()
+    },
+    isOnRoute: false,
+    currentPassengerCount: 0
+  });
 
   useEffect(() => {
     fetchBusData();
+    fetchStations();
   }, [busId]);
 
   const fetchBusData = async () => {
     try {
       setLoading(true);
       const response = await api.get(`/buses/${busId}`);
-      setFormData(response.data);
+      const busData = response.data;
+      console.log('Fetched bus data:', busData);
+      
+      setFormData({
+        status: busData.status,
+        routeNumber: busData.routeNumber,
+        schedule: {
+          departureTime: new Date(busData.schedule.departureTime).toISOString().slice(0, 16),
+          arrivalTime: new Date(busData.schedule.arrivalTime).toISOString().slice(0, 16)
+        },
+        currentStationId: busData.currentStationId,
+        stationId: busData.stationId,
+        currentLocation: busData.currentLocation,
+        trackingData: busData.trackingData,
+        isOnRoute: busData.isOnRoute,
+        currentPassengerCount: busData.currentPassengerCount
+      });
     } catch (error: any) {
       console.error('Error fetching bus data:', error);
       toast.error(error.response?.data?.message || 'Failed to fetch bus data');
       navigate('/station-admin/buses');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStations = async () => {
+    try {
+      const response = await api.get('/stations');
+      setStations(response.data);
+    } catch (error) {
+      console.error('Error fetching stations:', error);
+      setError('Failed to fetch stations');
     }
   };
 
@@ -97,6 +169,12 @@ const UpdateBusForm: React.FC = () => {
       // Validate schedule exists
       if (!formData.schedule) {
         setError('Schedule is required');
+        return;
+      }
+
+      // Validate route number
+      if (!formData.routeNumber) {
+        setError('Route number is required');
         return;
       }
 
@@ -134,6 +212,7 @@ const UpdateBusForm: React.FC = () => {
       // Only send the necessary data
       const updateData = {
         status: formData.status,
+        routeNumber: formData.routeNumber,
         schedule: formData.schedule,
         currentStationId: formData.currentStationId?._id,
         stationId: user?.stationId,
@@ -175,7 +254,7 @@ const UpdateBusForm: React.FC = () => {
     setFormData(prev => ({
       ...prev,
       schedule: {
-        ...prev.schedule!,
+        ...prev.schedule,
         [name]: value
       }
     }));
@@ -241,6 +320,21 @@ const UpdateBusForm: React.FC = () => {
                       <option value="INACTIVE">Inactive</option>
                       <option value="MAINTENANCE">Maintenance</option>
                     </select>
+                  </div>
+
+                  <div className="col-span-6 sm:col-span-3">
+                    <label htmlFor="routeNumber" className="block text-sm font-medium text-gray-700">
+                      Route Number
+                    </label>
+                    <input
+                      type="text"
+                      id="routeNumber"
+                      name="routeNumber"
+                      value={formData.routeNumber}
+                      onChange={handleChange}
+                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      placeholder="Enter route number"
+                    />
                   </div>
 
                   <div className="col-span-6 sm:col-span-3">
